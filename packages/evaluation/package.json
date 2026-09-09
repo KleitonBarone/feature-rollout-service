@@ -1,0 +1,21 @@
+{
+  "name": "@feature-rollout/evaluation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build tsconfig.build.json",
+    "typecheck": "tsc --build tsconfig.json --pretty false",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@sinclair/typebox": "catalog:",
+    "json-canonicalize": "catalog:"
+  }
+}

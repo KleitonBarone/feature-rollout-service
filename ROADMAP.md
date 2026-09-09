@@ -4,18 +4,18 @@ This roadmap stabilizes one deterministic evaluation contract before adding more
 
 ## 0. Foundation
 
-- [ ] Define flag, variant, environment, rule, rollout, context, and configuration version
-- [ ] Record the server, storage, SDK language, and repository-shape decisions
-- [ ] Add formatting, static checks, focused tests, and CI
-- [ ] Specify canonical configuration serialization
+- [x] Define flag, variant, environment, rule, rollout, context, and configuration version
+- [x] Record the server, storage, SDK language, and repository-shape decisions
+- [x] Add formatting, static checks, focused tests, and CI
+- [x] Specify canonical configuration serialization
 
 ## 1. Deterministic evaluation
 
-- [ ] Define boolean and multivariate flag schemas
-- [ ] Evaluate ordered attribute rules
-- [ ] Implement stable percentage assignment
-- [ ] Return evaluation details with reason codes
-- [ ] Create a language-neutral conformance fixture suite
+- [x] Define boolean and multivariate flag schemas
+- [x] Evaluate ordered attribute rules
+- [x] Implement stable percentage assignment
+- [x] Return evaluation details with reason codes
+- [x] Create a language-neutral conformance fixture suite
 
 ## 2. Configuration service and first SDK
 
@@ -23,7 +23,8 @@ This roadmap stabilizes one deterministic evaluation contract before adding more
 - [ ] Publish immutable configuration versions
 - [ ] Record an audit history for every change
 - [ ] Build one server-side SDK with local caching
-- [ ] Define stale-cache and safe-default behavior
+- [ ] Build typed configuration loading and refresh APIs around the evaluator
+- [ ] Define SDK stale-cache windows and refresh failure behavior
 
 ## 3. Operational proof
 

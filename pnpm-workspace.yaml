@@ -1,0 +1,6 @@
+packages:
+  - packages/*
+
+catalog:
+  "@sinclair/typebox": 0.34.52
+  json-canonicalize: 3.0.0

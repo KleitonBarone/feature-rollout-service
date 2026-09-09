@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "bucketing-conformance-v1",
+  "allocations": [
+    { "name": "first", "weight": 50000 },
+    { "name": "second", "weight": 50000 }
+  ],
+  "cases": [
+    { "name": "first bucket", "bucket": 0, "expected": "first" },
+    {
+      "name": "last bucket in first allocation",
+      "bucket": 49999,
+      "expected": "first"
+    },
+    {
+      "name": "first bucket in second allocation",
+      "bucket": 50000,
+      "expected": "second"
+    },
+    { "name": "last bucket", "bucket": 99999, "expected": "second" }
+  ]
+}

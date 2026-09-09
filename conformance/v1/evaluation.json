@@ -1,0 +1,276 @@
+{
+  "schemaVersion": "evaluation-conformance-v1",
+  "configurations": {
+    "invalid": {
+      "schemaVersion": "configuration-v1"
+    },
+    "standard": {
+      "schemaVersion": "configuration-v1",
+      "configurationVersion": 7,
+      "environment": "test",
+      "generatedAt": "2025-01-01T00:00:00.000Z",
+      "expiresAt": "2030-01-01T00:00:00.000Z",
+      "flags": [
+        {
+          "key": "ordered-rule",
+          "type": "boolean",
+          "defaultValue": false,
+          "rules": [
+            {
+              "id": "region-first",
+              "conditions": [
+                { "attribute": "region", "operator": "equals", "value": "BR" }
+              ],
+              "serve": true
+            },
+            {
+              "id": "plan-second",
+              "conditions": [
+                { "attribute": "plan", "operator": "equals", "value": "pro" }
+              ],
+              "serve": false
+            }
+          ]
+        },
+        {
+          "key": "typed-age",
+          "type": "boolean",
+          "defaultValue": false,
+          "rules": [
+            {
+              "id": "adult",
+              "conditions": [
+                { "attribute": "age", "operator": "equals", "value": 18 }
+              ],
+              "serve": true
+            }
+          ]
+        },
+        {
+          "key": "checkout-flow",
+          "type": "boolean",
+          "defaultValue": false,
+          "rules": [],
+          "rollout": {
+            "id": "checkout-50-50",
+            "bucketBy": "targetingKey",
+            "salt": "rollout-1",
+            "allocations": [
+              { "serve": true, "weight": 50000 },
+              { "serve": false, "weight": 50000 }
+            ]
+          }
+        },
+        {
+          "key": "theme",
+          "type": "multivariate",
+          "variants": [
+            { "key": "control", "value": "standard" },
+            { "key": "compact", "value": "dense" }
+          ],
+          "defaultVariant": "control",
+          "rules": [
+            {
+              "id": "enterprise-compact",
+              "conditions": [
+                {
+                  "attribute": "plan",
+                  "operator": "equals",
+                  "value": "enterprise"
+                }
+              ],
+              "serve": "compact"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "cases": [
+    {
+      "name": "first matching rule wins",
+      "operation": "boolean",
+      "configuration": "standard",
+      "flagKey": "ordered-rule",
+      "context": {
+        "schemaVersion": "evaluation-context-v1",
+        "attributes": { "region": "BR", "plan": "pro" }
+      },
+      "fallbackValue": false,
+      "now": "2026-01-01T00:00:00.000Z",
+      "expected": {
+        "value": true,
+        "flagKey": "ordered-rule",
+        "reasonCode": "TARGETING_MATCH",
+        "configurationVersion": 7,
+        "ruleId": "region-first"
+      }
+    },
+    {
+      "name": "missing rule attribute does not match",
+      "operation": "boolean",
+      "configuration": "standard",
+      "flagKey": "typed-age",
+      "context": { "schemaVersion": "evaluation-context-v1", "attributes": {} },
+      "fallbackValue": true,
+      "now": "2026-01-01T00:00:00.000Z",
+      "expected": {
+        "value": false,
+        "flagKey": "typed-age",
+        "reasonCode": "DEFAULT_NO_MATCH",
+        "configurationVersion": 7
+      }
+    },
+    {
+      "name": "rule attribute type mismatch does not coerce",
+      "operation": "boolean",
+      "configuration": "standard",
+      "flagKey": "typed-age",
+      "context": {
+        "schemaVersion": "evaluation-context-v1",
+        "attributes": { "age": "18" }
+      },
+      "fallbackValue": true,
+      "now": "2026-01-01T00:00:00.000Z",
+      "expected": {
+        "value": false,
+        "flagKey": "typed-age",
+        "reasonCode": "DEFAULT_NO_MATCH",
+        "configurationVersion": 7
+      }
+    },
+    {
+      "name": "percentage rollout uses stable bucket",
+      "operation": "boolean",
+      "configuration": "standard",
+      "flagKey": "checkout-flow",
+      "context": {
+        "schemaVersion": "evaluation-context-v1",
+        "targetingKey": "subject-a"
+      },
+      "fallbackValue": true,
+      "now": "2026-01-01T00:00:00.000Z",
+      "expected": {
+        "value": false,
+        "flagKey": "checkout-flow",
+        "reasonCode": "PERCENTAGE_MATCH",
+        "configurationVersion": 7,
+        "rolloutId": "checkout-50-50",
+        "bucket": 97186
+      }
+    },
+    {
+      "name": "missing rollout attribute uses declared default",
+      "operation": "boolean",
+      "configuration": "standard",
+      "flagKey": "checkout-flow",
+      "context": { "schemaVersion": "evaluation-context-v1" },
+      "fallbackValue": true,
+      "now": "2026-01-01T00:00:00.000Z",
+      "expected": {
+        "value": false,
+        "flagKey": "checkout-flow",
+        "reasonCode": "DEFAULT_MISSING_BUCKET_ATTRIBUTE",
+        "configurationVersion": 7
+      }
+    },
+    {
+      "name": "multivariate targeting resolves variant value",
+      "operation": "multivariate",
+      "configuration": "standard",
+      "flagKey": "theme",
+      "context": {
+        "schemaVersion": "evaluation-context-v1",
+        "attributes": { "plan": "enterprise" }
+      },
+      "fallbackValue": "caller-fallback",
+      "now": "2026-01-01T00:00:00.000Z",
+      "expected": {
+        "value": "dense",
+        "flagKey": "theme",
+        "reasonCode": "TARGETING_MATCH",
+        "configurationVersion": 7,
+        "ruleId": "enterprise-compact",
+        "variantKey": "compact"
+      }
+    },
+    {
+      "name": "stale configuration uses declared default",
+      "operation": "multivariate",
+      "configuration": "standard",
+      "flagKey": "theme",
+      "context": {
+        "schemaVersion": "evaluation-context-v1",
+        "attributes": { "plan": "enterprise" }
+      },
+      "fallbackValue": "caller-fallback",
+      "now": "2030-01-01T00:00:00.000Z",
+      "expected": {
+        "value": "standard",
+        "flagKey": "theme",
+        "reasonCode": "DEFAULT_STALE_CONFIGURATION",
+        "configurationVersion": 7,
+        "variantKey": "control"
+      }
+    },
+    {
+      "name": "invalid context uses declared default",
+      "operation": "boolean",
+      "configuration": "standard",
+      "flagKey": "ordered-rule",
+      "context": { "schemaVersion": "unknown-context" },
+      "fallbackValue": true,
+      "now": "2026-01-01T00:00:00.000Z",
+      "expected": {
+        "value": false,
+        "flagKey": "ordered-rule",
+        "reasonCode": "DEFAULT_INVALID_CONTEXT",
+        "configurationVersion": 7
+      }
+    },
+    {
+      "name": "invalid configuration uses caller fallback",
+      "operation": "boolean",
+      "configuration": "invalid",
+      "flagKey": "ordered-rule",
+      "context": { "schemaVersion": "evaluation-context-v1" },
+      "fallbackValue": true,
+      "now": "2026-01-01T00:00:00.000Z",
+      "expected": {
+        "value": true,
+        "flagKey": "ordered-rule",
+        "reasonCode": "FALLBACK_INVALID_CONFIGURATION"
+      }
+    },
+    {
+      "name": "missing flag uses caller fallback",
+      "operation": "boolean",
+      "configuration": "standard",
+      "flagKey": "does-not-exist",
+      "context": { "schemaVersion": "evaluation-context-v1" },
+      "fallbackValue": true,
+      "now": "2026-01-01T00:00:00.000Z",
+      "expected": {
+        "value": true,
+        "flagKey": "does-not-exist",
+        "reasonCode": "FALLBACK_FLAG_NOT_FOUND",
+        "configurationVersion": 7
+      }
+    },
+    {
+      "name": "wrong evaluation type uses caller fallback",
+      "operation": "boolean",
+      "configuration": "standard",
+      "flagKey": "theme",
+      "context": { "schemaVersion": "evaluation-context-v1" },
+      "fallbackValue": true,
+      "now": "2026-01-01T00:00:00.000Z",
+      "expected": {
+        "value": true,
+        "flagKey": "theme",
+        "reasonCode": "FALLBACK_FLAG_TYPE_MISMATCH",
+        "configurationVersion": 7
+      }
+    }
+  ]
+}

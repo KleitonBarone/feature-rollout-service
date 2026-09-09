@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "hashing-conformance-v1",
+  "cases": [
+    {
+      "name": "string subject a",
+      "input": {
+        "flagKey": "checkout-flow",
+        "salt": "rollout-1",
+        "value": "subject-a"
+      },
+      "expectedBucket": 97186
+    },
+    {
+      "name": "string subject b",
+      "input": {
+        "flagKey": "checkout-flow",
+        "salt": "rollout-1",
+        "value": "subject-b"
+      },
+      "expectedBucket": 87500
+    },
+    {
+      "name": "number keeps its JSON type",
+      "input": { "flagKey": "checkout-flow", "salt": "rollout-1", "value": 42 },
+      "expectedBucket": 73245
+    },
+    {
+      "name": "boolean keeps its JSON type",
+      "input": {
+        "flagKey": "checkout-flow",
+        "salt": "rollout-1",
+        "value": true
+      },
+      "expectedBucket": 55742
+    }
+  ]
+}
