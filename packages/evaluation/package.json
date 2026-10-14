@@ -2,6 +2,10 @@
   "name": "@feature-rollout/evaluation",
   "version": "0.1.0",
   "private": true,
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
   "type": "module",
   "exports": {
     ".": {

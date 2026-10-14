@@ -4,3 +4,8 @@ packages:
 catalog:
   "@sinclair/typebox": 0.34.52
   json-canonicalize: 3.0.0
+
+allowBuilds:
+  embedded-postgres: true
+  "@embedded-postgres/windows-x64": true
+  "@embedded-postgres/linux-x64": true

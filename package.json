@@ -8,16 +8,22 @@
   },
   "scripts": {
     "build": "tsc --build packages/evaluation/tsconfig.build.json",
+    "dev": "node scripts/dev.mjs",
+    "dev:db": "node scripts/database.mjs",
+    "dev:stop": "node scripts/database.mjs stop",
     "check": "prettier --check . && eslint . && tsc --build && vitest run",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "node --test --test-concurrency=1 tests/e2e/*.test.mjs",
     "typecheck": "tsc --build"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@types/node": "24.13.3",
+    "embedded-postgres": "17.10.0-beta.17",
     "eslint": "10.9.1",
     "prettier": "3.9.6",
     "typescript": "5.9.3",

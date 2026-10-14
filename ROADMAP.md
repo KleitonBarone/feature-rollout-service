@@ -18,11 +18,11 @@ These complete the original milestones 0 and 1. They do not yet provide a config
 
 [Plan phase 1](docs/implementation-plan.md#phase-1-make-development-and-verification-dependable) is the next implementation task and a prerequisite for further product development.
 
-- [ ] Working local example with source watching and focused test watch mode.
-- [ ] Isolated local PostgreSQL, readiness checks, and safe process cleanup.
-- [ ] End-to-end tests through packed artifacts installed in an external consumer.
+- [x] Working local example with source watching and focused test watch mode.
+- [x] Isolated local PostgreSQL, readiness checks, and safe process cleanup.
+- [x] End-to-end tests through packed artifacts installed in an external consumer.
 - [ ] Repeatable test infrastructure with ephemeral ports, isolated databases, and failure logs.
-- [ ] Ubuntu and Windows fast checks, installed-package CI, and contributor instructions.
+- [x] Ubuntu and Windows fast checks, installed-package CI, and contributor instructions.
 
 ## 2. Configuration service and first SDK
 

@@ -32,6 +32,9 @@ Use Node.js 24 and pnpm 11. Run these commands from the repository root:
 - `pnpm test` runs the focused Vitest suite and conformance fixtures.
 - `pnpm build` emits the evaluation package.
 - `pnpm check` runs formatting, linting, type checking, and tests.
+- `pnpm test:e2e` verifies installed package artifacts in an external consumer.
+- `pnpm dev` watches the working example; `pnpm test:watch` watches focused tests.
+- `pnpm dev:db` starts owned local PostgreSQL. Test databases must use disposable native clusters, never a deployment `DATABASE_URL`.
 
 Build conformance fixtures for rule ordering, missing attributes, type mismatches, percentage boundaries, hash stability, stale configuration, and safe defaults. Run the same fixtures against every SDK implementation.
 
