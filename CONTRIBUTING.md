@@ -6,7 +6,7 @@ Install Node.js 24 and pnpm 11, then run `pnpm install --frozen-lockfile`.
 - `pnpm test:watch` runs focused tests on edits. Pass a test filename to select it.
 - `pnpm check` checks formatting, lint, types, and unit/conformance tests.
 - `pnpm verify` adds real PostgreSQL/HTTP integration and installed SDK end-to-end tests.
-- `pnpm pack:release` creates reviewed local tarballs. `pnpm benchmark` reports local costs.
+- `pnpm build` regenerates the dependency-free `sdk/` folder. `pnpm test:package` verifies strict types and external consumers on Windows and Ubuntu. `pnpm benchmark` reports local costs.
 - `pnpm test:e2e` installs packed artifacts in a disposable external consumer.
 - `pnpm dev:db` runs native PostgreSQL on localhost:55432 with data in `.local/postgres`. Stop with Ctrl+C or `pnpm dev:stop`.
 - `docker compose up -d --wait postgres` is an alternative database launcher. Do not run both on the same port.

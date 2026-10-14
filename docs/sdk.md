@@ -1,9 +1,9 @@
 # Node.js integration
 
-Use Node.js 24 with ESM. Run `pnpm pack:release` to create local tarballs in `.local/artifacts`. Public registry publication is pending credentials and namespace confirmation.
+Use Node.js 24 with ESM. Copy the repository's [sdk folder](../sdk/README.md) into your application, for example as `vendor/feature-rollout`. It includes bundled JavaScript, standalone TypeScript declarations, license, and third-party notices. There are no runtime dependencies or npm installation steps.
 
 ```ts
-import { RolloutClient } from "@feature-rollout/sdk-node";
+import { RolloutClient } from "./vendor/feature-rollout/index.js";
 
 const flags = new RolloutClient({
   url: "http://127.0.0.1:3100",

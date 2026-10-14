@@ -52,4 +52,4 @@ V1 limits are 1 MiB request/configuration bodies and 1000 active flags per envir
 - `409`: refetch draft and active versions. After kill/rollback, review pending edits and explicitly rebase before publishing.
 - `503`: check storage/readiness. SDK checks continue locally until maximum age.
 - `VERSION_REGRESSION`: investigate restored storage or altered bytes.
-- Native PostgreSQL launch errors: inspect captured logs and port conflicts. Development is verified on Ubuntu x64 and Windows x64 through CI.
+- Native PostgreSQL launch errors: inspect captured logs and port conflicts. PostgreSQL requires an unprivileged account, including on Windows. Database suites run on Ubuntu CI; Windows CI checks types, unit tests, and external package/copy integration. The native database path is also exercised locally on Windows.

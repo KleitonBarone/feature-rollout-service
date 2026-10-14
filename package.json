@@ -7,7 +7,7 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "build": "tsc --build packages/evaluation/tsconfig.build.json packages/service/tsconfig.build.json packages/sdk-node/tsconfig.build.json",
+    "build": "tsc --build packages/evaluation/tsconfig.build.json packages/service/tsconfig.build.json packages/sdk-node/tsconfig.build.json && node scripts/bundle-sdk.mjs",
     "dev": "node scripts/dev.mjs",
     "demo": "node scripts/demo.mjs",
     "start": "node --env-file=.env packages/service/dist/main.js",
@@ -23,6 +23,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "node --test --test-concurrency=1 tests/e2e/*.test.mjs",
+    "test:package": "node --test tests/e2e/package.test.mjs tests/e2e/copy-sdk.test.mjs",
     "test:integration": "node --test --test-concurrency=1 tests/integration/*.test.mjs",
     "verify": "pnpm check && pnpm build && pnpm test:integration && pnpm test:e2e",
     "typecheck": "tsc --build"
@@ -32,8 +33,11 @@
     "@types/node": "24.13.3",
     "@types/pg": "8.23.1",
     "embedded-postgres": "17.10.0-beta.17",
+    "esbuild": "0.28.2",
     "eslint": "10.9.1",
     "prettier": "3.9.6",
+    "rollup": "4.64.6",
+    "rollup-plugin-dts": "6.5.1",
     "typescript": "5.9.3",
     "typescript-eslint": "8.68.0",
     "vitest": "4.1.11"

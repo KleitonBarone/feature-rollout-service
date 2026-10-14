@@ -11,9 +11,7 @@
     "url": "https://github.com/KleitonBarone/feature-rollout-service.git",
     "directory": "packages/evaluation"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "private": true,
   "files": [
     "dist",
     "LICENSE"

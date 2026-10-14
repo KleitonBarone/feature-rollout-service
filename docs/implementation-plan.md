@@ -2,6 +2,8 @@
 
 This plan takes the current evaluator to a complete first release of Feature Rollout Service. It describes future work. Complete the phases in order and record evidence for each exit condition in the roadmap.
 
+Implementation update, 2026-10-14: the service, SDK, operational tests, and development loop are implemented. Distribution changed at the user's request: the checked-in `sdk/` folder is copyable, with no npm publication. Public package names, registry credentials, and publishing workflows are no longer completion requirements. This document retains the original phased design; the roadmap records current verification evidence.
+
 ## Product and completion boundary
 
 Build a small self-hosted feature-flag service for teams running Node.js applications. Users manage flags by environment, publish changes, and integrate one TypeScript SDK. Applications evaluate from local configuration, with stable percentage assignment and explicit failure behavior.

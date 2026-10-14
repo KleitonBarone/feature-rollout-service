@@ -11,9 +11,7 @@
     "url": "https://github.com/KleitonBarone/feature-rollout-service.git",
     "directory": "packages/sdk-node"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "private": true,
   "type": "module",
   "files": [
     "dist",

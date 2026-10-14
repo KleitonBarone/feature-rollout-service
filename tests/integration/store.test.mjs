@@ -10,8 +10,7 @@ test(
     const database = await startPostgres();
     let store = new Store(database.connectionString);
     try {
-      await store.migrate();
-      await store.migrate();
+      await store.migrate("001-foundation.sql");
       await store.createEnvironment("test", "synthetic-admin");
       await store.edit("test", 0, "synthetic-admin", {
         type: "put",
@@ -46,6 +45,19 @@ test(
         1,
       );
       const original = await store.publication("test");
+      const eventsBeforeUpgrade = await store.events("test");
+      await store.migrate();
+      await store.migrate();
+      assert.deepEqual(await store.publication("test"), original);
+      assert.deepEqual(await store.events("test"), eventsBeforeUpgrade);
+      assert.equal(
+        (
+          await store.pool.query(
+            "SELECT to_regclass('audit_events_environment_id')::text AS name",
+          )
+        ).rows[0].name,
+        "audit_events_environment_id",
+      );
       assert.deepEqual(
         await store.publish(
           "test",

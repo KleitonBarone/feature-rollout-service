@@ -37,7 +37,7 @@ Use Node.js 24 and pnpm 11. Run these commands from the repository root:
 - `pnpm dev:db` starts owned local PostgreSQL. Test databases must use disposable native clusters, never a deployment `DATABASE_URL`.
 - `pnpm verify` is the full gate, including real PostgreSQL/HTTP and installed SDK tests.
 - `pnpm demo` runs the full localhost example; `pnpm dev` watches all three packages.
-- `pnpm pack:release` produces local candidates; publishing requires confirmed namespace and credentials.
+- `pnpm build` regenerates the copyable `sdk/` JavaScript, declarations, and notices. Edit maintained source, not those generated files. SDK distribution is repository-only, never npm publishing.
 
 Build conformance fixtures for rule ordering, missing attributes, type mismatches, percentage boundaries, hash stability, stale configuration, and safe defaults. Run the same fixtures against every SDK implementation.
 

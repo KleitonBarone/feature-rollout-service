@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, readdir, writeFile, rm } from "node:fs/promises";
+import { cp, mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fork } from "node:child_process";
@@ -79,53 +79,20 @@ test(
         expectedActiveVersion: 0,
         idempotencyKey: "initial",
       });
-      for (const pkg of ["evaluation", "sdk-node"])
-        await pnpm([
-          "--dir",
-          "packages/" + pkg,
-          "pack",
-          "--pack-destination",
-          directory,
-        ]);
-      const tarballs = (await readdir(directory)).filter((file) =>
-        file.endsWith(".tgz"),
-      );
-      const evaluation = tarballs.find((file) => file.includes("evaluation"));
-      assert.ok(evaluation);
+      await cp("sdk", join(directory, "sdk"), { recursive: true });
       await writeFile(
         join(directory, "package.json"),
-        JSON.stringify({
-          private: true,
-          type: "module",
-          pnpm: {
-            overrides: {
-              "@feature-rollout/evaluation":
-                "file:" + join(directory, evaluation).replaceAll("\\", "/"),
-            },
-          },
-        }),
+        '{"private":true,"type":"module"}',
       );
-      await writeFile(
-        join(directory, "pnpm-workspace.yaml"),
-        `packages: []\noverrides:\n  '@feature-rollout/evaluation': ${JSON.stringify("file:" + join(directory, evaluation).replaceAll("\\", "/"))}\n`,
-      );
-      await pnpm([
-        "--dir",
-        directory,
-        "add",
-        "--ignore-scripts",
-        ...tarballs.map((file) => join(directory, file)),
-      ]);
       await writeFile(
         join(directory, "types.ts"),
-        "import { RolloutClient } from '@feature-rollout/sdk-node';\nconst client = new RolloutClient({url:'http://localhost',token:'synthetic-read-token',environment:'test'});\nconst value: boolean = client.boolean('feature',{targetingKey:'subject-a'},false);\nconsole.log(value);\nvoid client.close();",
+        "import { RolloutClient } from './sdk/index.js';\nconst client = new RolloutClient({url:'http://localhost',token:'synthetic-read-token',environment:'test'});\nconst value: boolean = client.boolean('feature',{targetingKey:'subject-a'},false);\nconsole.log(value);\nvoid client.close();",
       );
       await run(
         process.execPath,
         [
           resolve("node_modules/typescript/bin/tsc"),
           "--strict",
-          "--skipLibCheck",
           "--noEmit",
           "--module",
           "NodeNext",
@@ -137,7 +104,7 @@ test(
       );
       await writeFile(
         join(directory, "app.mjs"),
-        `import {RolloutClient} from '@feature-rollout/sdk-node';\nlet now=0, requests=0;\nconst client=new RolloutClient({url:process.env.FRS_URL,token:'synthetic-read-token',environment:'test',maxAgeMs:100,refreshIntervalMs:60000,requestTimeoutMs:250,now:()=>now,fetch:(...args)=>{requests++;return fetch(...args);}});\nprocess.on('message',async message=>{if(message.now!==undefined)now=message.now;let value;if(message.operation==='refresh')value=await client.refresh();else if(message.operation==='close'){await client.close();process.send({id:message.id,value:true});process.disconnect();return;}else value={details:client.booleanDetails(message.key??'ordered-rule',message.context??{attributes:{region:'BR',plan:'pro'}},false),requests,status:client.status()};process.send({id:message.id,value});});\ntry{await client.start();process.send({id:0,value:'ready'});}catch(error){process.send({id:0,error:error.message});await client.close();process.disconnect();}`,
+        `import {RolloutClient} from './sdk/index.js';\nlet now=0, requests=0;\nconst client=new RolloutClient({url:process.env.FRS_URL,token:'synthetic-read-token',environment:'test',maxAgeMs:100,refreshIntervalMs:60000,requestTimeoutMs:250,now:()=>now,fetch:(...args)=>{requests++;return fetch(...args);}});\nprocess.on('message',async message=>{if(message.now!==undefined)now=message.now;let value;if(message.operation==='refresh')value=await client.refresh();else if(message.operation==='close'){await client.close();process.send({id:message.id,value:true});process.disconnect();return;}else value={details:client.booleanDetails(message.key??'ordered-rule',message.context??{attributes:{region:'BR',plan:'pro'}},false),requests,status:client.status()};process.send({id:message.id,value});});\ntry{await client.start();process.send({id:0,value:'ready'});}catch(error){process.send({id:0,error:error.message});await client.close();process.disconnect();}`,
       );
       child = fork(join(directory, "app.mjs"), [], {
         cwd: directory,

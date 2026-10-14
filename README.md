@@ -2,7 +2,7 @@
 
 Feature Rollout Service is a self-hosted feature-flag service for Node.js applications. Publish a flag, target users or roll it out by percentage, and evaluate it locally through a TypeScript SDK. Flag checks keep working during outages and return explicit defaults when cached configuration becomes stale.
 
-The service and SDK work as a release candidate. Public npm packages and a published image are pending release setup.
+The service and SDK are implemented. The SDK lives in this repository as a copyable folder with JavaScript and TypeScript declarations. No npm package is published.
 
 ## Try it locally
 
@@ -31,7 +31,7 @@ Your application makes no HTTP request for each flag check. Updates arrive throu
 
 ## Where to go next
 
-- [SDK integration](docs/sdk.md) for application setup, defaults, and lifecycle.
+- Copy [sdk/](sdk/README.md) into your application, then follow [SDK integration](docs/sdk.md).
 - [Management API](docs/api.md) for publishing and inspecting flags.
 - [Running the service](docs/operations.md) for containers, credentials, upgrades, and backups.
 - [Contributing](CONTRIBUTING.md) for the development loop and `pnpm verify`.

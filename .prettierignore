@@ -3,3 +3,6 @@ coverage
 pnpm-lock.yaml
 LICENSE
 .local
+sdk/index.js
+sdk/index.d.ts
+sdk/THIRD_PARTY_NOTICES.md

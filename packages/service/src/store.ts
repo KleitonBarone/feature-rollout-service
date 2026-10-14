@@ -42,7 +42,7 @@ export type PublishInput = {
 const digest = (value: string) =>
   createHash("sha256").update(value).digest("hex");
 
-export async function migrate(pool: Pool): Promise<void> {
+export async function migrate(pool: Pool, through?: string): Promise<void> {
   const client = await pool.connect();
   try {
     await client.query("SELECT pg_advisory_lock(71349011)");
@@ -50,9 +50,13 @@ export async function migrate(pool: Pool): Promise<void> {
       "CREATE TABLE IF NOT EXISTS schema_migrations (name text PRIMARY KEY, digest text NOT NULL)",
     );
     const directory = new URL("../migrations/", import.meta.url);
-    for (const name of (await readdir(directory))
+    const migrations = (await readdir(directory))
       .filter((name) => name.endsWith(".sql"))
-      .sort()) {
+      .sort();
+    if (through && !migrations.includes(through))
+      throw new Error("Unknown migration target");
+    for (const name of migrations) {
+      if (through && name > through) break;
       const sql = await readFile(new URL(name, directory), "utf8");
       const existing = await client.query<{ digest: string }>(
         "SELECT digest FROM schema_migrations WHERE name=$1",
@@ -99,8 +103,8 @@ export class Store {
   async close() {
     await this.pool.end();
   }
-  async migrate() {
-    await migrate(this.pool);
+  async migrate(through?: string) {
+    await migrate(this.pool, through);
   }
   async transaction<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {
     const client = await this.pool.connect();

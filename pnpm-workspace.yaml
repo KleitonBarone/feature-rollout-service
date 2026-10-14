@@ -6,6 +6,7 @@ catalog:
   json-canonicalize: 3.0.0
 
 allowBuilds:
+  esbuild: true
   embedded-postgres: true
   "@embedded-postgres/windows-x64": true
   "@embedded-postgres/linux-x64": true
