@@ -86,6 +86,18 @@ test(
         ),
         original,
       );
+      assert.deepEqual(
+        await store.publish(
+          "test",
+          {
+            idempotencyKey: original.idempotency_key,
+            expectedActiveVersion: 0,
+            expectedRevision: 1,
+          },
+          "synthetic-admin",
+        ),
+        original,
+      );
       await assert.rejects(
         store.pool.query("UPDATE publications SET digest=$1", ["changed"]),
         /immutable/,
@@ -177,6 +189,10 @@ test(
         ),
         /different input/,
       );
+      await store.archiveEnvironment("test", "synthetic-admin", 4);
+      await assert.rejects(store.publication("test"), /archived/);
+      assert.deepEqual(await store.publication("test", 1), original);
+      assert.equal((await store.history("test")).length, 3);
     } finally {
       await store.close();
       await database.close();

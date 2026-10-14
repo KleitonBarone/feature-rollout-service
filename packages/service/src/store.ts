@@ -124,6 +124,7 @@ export class Store {
     name: string,
     client: PoolClient | Pool = this.pool,
     lock = false,
+    includeArchived = false,
   ): Promise<EnvironmentRow> {
     const result = await client.query<EnvironmentRow>(
       `SELECT * FROM environments WHERE name=$1${lock ? " FOR UPDATE" : ""}`,
@@ -136,7 +137,7 @@ export class Store {
         "ENVIRONMENT_NOT_FOUND",
         "Environment not found",
       );
-    if (environment.archived)
+    if (environment.archived && !includeArchived)
       throw new ServiceError(
         410,
         "ENVIRONMENT_ARCHIVED",
@@ -310,7 +311,12 @@ export class Store {
     version?: number,
     client: PoolClient | Pool = this.pool,
   ): Promise<Publication> {
-    const environment = await this.environment(name, client);
+    const environment = await this.environment(
+      name,
+      client,
+      false,
+      version !== undefined,
+    );
     const result = await client.query<Publication>(
       "SELECT * FROM publications WHERE environment=$1 AND version=$2",
       [name, version ?? environment.active_version],
@@ -335,7 +341,19 @@ export class Store {
   ) {
     return this.transaction(async (client) => {
       const environment = await this.environment(name, client, true);
-      const requestHash = digest(JSON.stringify({ input, operation }));
+      const requestHash = digest(
+        JSON.stringify([
+          input.expectedRevision,
+          input.expectedActiveVersion,
+          input.idempotencyKey,
+          operation.type,
+          operation.type === "rollback"
+            ? operation.version
+            : operation.type === "kill"
+              ? operation.key
+              : null,
+        ]),
+      );
       const existing = await client.query<Publication>(
         "SELECT * FROM publications WHERE environment=$1 AND idempotency_key=$2",
         [name, input.idempotencyKey],
@@ -429,7 +447,7 @@ export class Store {
     });
   }
   async history(name: string, after = 0, limit = 50) {
-    await this.environment(name);
+    await this.environment(name, this.pool, false, true);
     return (
       await this.pool.query<{ version: number; digest: string }>(
         "SELECT version,digest FROM publications WHERE environment=$1 AND version>$2 ORDER BY version LIMIT $3",
