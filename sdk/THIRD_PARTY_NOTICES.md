@@ -4,7 +4,7 @@
 
 TypeBox
 
-Json Schema Type Builder with Static Type Resolution for TypeScript 
+Json Schema Type Builder with Static Type Resolution for TypeScript
 
 The MIT License (MIT)
 

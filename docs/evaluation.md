@@ -42,6 +42,8 @@ A workspace package that declares `@feature-rollout/evaluation` as a dependency 
 
 The package exports TypeBox schemas and derived TypeScript types for `configuration-v1` and `evaluation-context-v1`. `parseConfiguration` and `parseEvaluationContext` validate unknown input and throw `ContractValidationError` with validation issues.
 
+Portable JSON schemas are in [docs/schemas](schemas/configuration-v2.json). Schema validation covers structure; semantic validation additionally checks duplicate keys, variant references, allocation totals, safe numeric values, Unicode, and timestamp validity.
+
 Configuration has a positive safe-integer version, environment key, generation and expiry timestamps, and ordered flags. Timestamps use exactly `YYYY-MM-DDTHH:mm:ss.sssZ`. Context has an optional targeting key and optional string, number, or boolean attributes.
 
 Boolean flags serve booleans and declare `defaultValue`. Multivariate flags map variant keys to strings and declare `defaultVariant`. Rules and allocations refer to variant keys. Arbitrary JSON variant values are not supported.

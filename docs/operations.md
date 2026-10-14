@@ -46,6 +46,8 @@ Before upgrading, back up publication and audit history, verify against restored
 
 V1 limits are 1 MiB request/configuration bodies and 1000 active flags per environment. Pools hold at most ten connections; database statements time out after five seconds. SDKs can set stricter size limits. `pnpm benchmark` reports reproducible measurements, not production throughput guarantees.
 
+Scoped management credentials can inspect local aggregate counters through `/v1/metrics` when authorized for all environments. Counters contain request, failure, unchanged-response, and successful publication-request totals. They contain no evaluation identities or attributes. Draft audit records retain validated before/after flag definitions so changes can be inspected.
+
 ## Troubleshooting
 
 - `401/403`: check credential scope. Revocation immediately activates declared defaults in clients with cached configuration.

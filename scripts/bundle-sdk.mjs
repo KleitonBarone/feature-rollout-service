@@ -1,7 +1,7 @@
 import { build } from "esbuild";
 import { rollup } from "rollup";
 import { dts } from "rollup-plugin-dts";
-import { copyFile, readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import ts from "typescript";
@@ -45,13 +45,18 @@ try {
 } finally {
   await types.close();
 }
-await copyFile("LICENSE", "sdk/LICENSE");
+await writeFile(
+  "sdk/LICENSE",
+  (await readFile("LICENSE", "utf8")).replaceAll("\r\n", "\n"),
+);
 const typebox = resolve("packages/evaluation/node_modules/@sinclair/typebox");
 const canonical = resolve("packages/evaluation/node_modules/json-canonicalize");
+const notices =
+  "# Third-party notices\n\n## TypeBox\n\n" +
+  (await readFile(join(typebox, "license"), "utf8")) +
+  "\n## json-canonicalize\n\n" +
+  (await readFile(join(canonical, "LICENSE.md"), "utf8"));
 await writeFile(
   "sdk/THIRD_PARTY_NOTICES.md",
-  "# Third-party notices\n\n## TypeBox\n\n" +
-    (await readFile(join(typebox, "license"), "utf8")) +
-    "\n## json-canonicalize\n\n" +
-    (await readFile(join(canonical, "LICENSE.md"), "utf8")),
+  notices.replaceAll("\r\n", "\n").replace(/[ \t]+$/gm, ""),
 );

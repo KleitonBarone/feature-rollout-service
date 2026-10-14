@@ -12,6 +12,26 @@ test(
     try {
       await store.migrate("001-foundation.sql");
       await store.createEnvironment("test", "synthetic-admin");
+      await assert.rejects(
+        store.edit("test", 0, "synthetic-admin", {
+          type: "put",
+          flag: {
+            key: "invalid",
+            type: "boolean",
+            defaultValue: false,
+            rules: [],
+            rollout: {
+              id: "partial",
+              salt: "stable",
+              bucketBy: "targetingKey",
+              allocations: [{ serve: true, weight: 99999 }],
+            },
+          },
+        }),
+        /Invalid configuration/,
+      );
+      assert.equal((await store.draft("test")).revision, 0);
+      assert.equal((await store.events("test")).length, 1);
       await store.edit("test", 0, "synthetic-admin", {
         type: "put",
         flag: {
@@ -134,6 +154,17 @@ test(
           (event) => event.action === "rollback",
         ),
       );
+      const archived = await store.edit("test", 2, "synthetic-admin", {
+        type: "archive",
+        key: "feature",
+      });
+      assert.equal(archived.archivedFlags[0].key, "feature");
+      const restored = await store.edit("test", 3, "synthetic-admin", {
+        type: "restore",
+        key: "feature",
+      });
+      assert.equal(restored.archivedFlags.length, 0);
+      assert.ok(restored.flags.some((flag) => flag.key === "feature"));
       await assert.rejects(
         store.publish(
           "test",

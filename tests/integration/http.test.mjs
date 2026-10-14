@@ -98,6 +98,27 @@ test(
       const etag = response.headers.get("etag");
       const original = await response.text();
       assert.equal(JSON.parse(original).schemaVersion, "configuration-v2");
+      await request("/v1/environments", "POST", { name: "other" });
+      await request("/v1/environments/other/flags/feature", "PUT", {
+        expectedRevision: 0,
+        flag: {
+          key: "feature",
+          type: "boolean",
+          defaultValue: true,
+          rules: [],
+        },
+      });
+      await request("/v1/environments/other/publish", "POST", {
+        expectedRevision: 1,
+        expectedActiveVersion: 0,
+        idempotencyKey: "other",
+      });
+      assert.equal(
+        (await (await request("/v1/environments/other/configuration")).json())
+          .flags[0].defaultValue,
+        true,
+      );
+      assert.equal(JSON.parse(original).flags[0].defaultValue, false);
       assert.equal(
         (
           await request(
@@ -144,6 +165,18 @@ test(
         (await (await request("/v1/environments/test/audit")).json())[0].actor,
         "admin",
       );
+      assert.equal(
+        (await request("/v1/environments/test/configuration")).status,
+        200,
+      );
+      await db.database.stop();
+      assert.equal(
+        (await request("/v1/environments/test/configuration")).status,
+        503,
+      );
+      assert.equal((await fetch(url + "/health/live")).status, 200);
+      assert.equal((await fetch(url + "/health/ready")).status, 503);
+      await db.database.start();
       assert.equal(
         (await request("/v1/environments/test/configuration")).status,
         200,

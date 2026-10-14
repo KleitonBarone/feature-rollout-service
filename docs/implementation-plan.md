@@ -1,6 +1,6 @@
 # Implementation plan
 
-This plan takes the current evaluator to a complete first release of Feature Rollout Service. It describes future work. Complete the phases in order and record evidence for each exit condition in the roadmap.
+This plan records the build order for the first complete version of Feature Rollout Service. The roadmap records completed work and verification evidence.
 
 Implementation update, 2026-10-14: the service, SDK, operational tests, and development loop are implemented. Distribution changed at the user's request: the checked-in `sdk/` folder is copyable, with no npm publication. Public package names, registry credentials, and publishing workflows are no longer completion requirements. This document retains the original phased design; the roadmap records current verification evidence.
 
@@ -13,7 +13,7 @@ A complete first release lets a new user:
 1. Start the service and PostgreSQL locally from documented commands.
 2. Create an environment and a boolean or string-valued multivariate flag.
 3. Configure ordered targeting and a percentage rollout, then publish it.
-4. Install the SDK into an application outside this workspace and get a typed result.
+4. Copy the standalone SDK into an application outside this workspace and get a typed result.
 5. Observe a published update without restarting the application.
 6. Explain a decision, disable a rollout, restore a previous configuration, and inspect the audit history.
 7. Keep serving requests during a service outage, then recover within documented bounds.
@@ -178,13 +178,12 @@ Measure evaluation latency, allocation distribution, snapshot size, and refresh 
 - Add guides for lifecycle, targeting, weights, defaults, freshness, credential scopes/rotation, API requests, rollback, and troubleshooting. Keep architecture and full reason codes out of the README.
 - Build a non-root service image. Document Compose deployment, durable volumes, health checks, environment validation, explicit migrations, backup/restore, and upgrades.
 - Test a supported version upgrade and restore from a test backup. Publication and audit data must survive those operations.
-- Pack public packages with declarations, exports, license, metadata, and required runtime dependencies only. Document ESM and Node.js 24 support and test that exact claim.
-- Rehearse SDK and image releases locally. Add manually triggered release workflows with provenance, immutable version tags, and a changelog. Required checks run before publishing.
-- Confirm the package namespace before announcing installation commands; choose an available name if necessary.
+- Generate a standalone repository SDK with bundled runtime code, declarations, license, and notices. Document ESM and Node.js 24 support and test that exact claim without workspace links or installed dependencies.
+- Verify service images and the copyable SDK locally and in CI. Keep versioned Git history and a changelog. No npm publishing workflow or registry credential is needed.
 
 ### Exit conditions
 
-A fresh external app follows the quickstart with release-candidate tarballs and a locally built image. Maintained examples or verification scripts exercise every guide command. Upgrade and restore tests pass. Public publishing is a separate action when authorized; a local rehearsal is not a public release.
+A fresh external app follows the quickstart with the copied SDK and a locally built service image. Maintained examples exercise integration. Populated-schema upgrades, backup/restore, and container startup pass. Distribution is through this repository.
 
 ## Development commands to deliver
 
@@ -219,7 +218,7 @@ For each change, state user-visible behavior, add the narrow relevant test, run 
 - [ ] Defaults, freshness, polling delays, and kill limitations are clear to integrators.
 - [ ] Windows and Ubuntu development commands work; required CI is green.
 - [ ] Quickstart, backup/restore, upgrade, packaging, and image rehearsals pass.
-- [ ] Public package names and runtime support are confirmed.
-- [ ] The authorized release is published and a clean consumer uses its artifacts.
+- [ ] The local SDK entry point and runtime support are verified.
+- [ ] The copyable folder is committed and a clean consumer uses it without installing dependencies.
 
-The next implementation task is phase 1. Later product work starts once its development and verification loop is usable.
+The implementation followed this sequence. Refer to the roadmap for the current completion record.
