@@ -26,6 +26,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm build
+      - run: pnpm docs:check
       - run: pnpm test:integration
         if: runner.os == 'Linux'
       - run: pnpm test:e2e

@@ -46,7 +46,7 @@ Keep these responsibilities separate:
 - `packages/evaluation` owns versioned semantics, validation, serialization, hashing, and prepared evaluation snapshots.
 - `packages/service` owns HTTP, credentials, PostgreSQL, publication, and audit records.
 - `packages/sdk-node` owns HTTP loading, refresh, snapshot replacement, lifecycle, and local evaluation.
-- `examples/node-app` shows the public SDK in an ordinary HTTP application.
+- `scripts/demo.mjs` shows the SDK in an ordinary HTTP application alongside a local service.
 - `tests/e2e` exercises installed artifacts and running processes.
 
 The SDK depends on the evaluator and documented JSON contracts. It never imports service code, SQL types, or database records. Add another shared package only if a real public contract requires it.

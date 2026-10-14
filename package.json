@@ -13,6 +13,7 @@
     "start": "node --env-file=.env packages/service/dist/main.js",
     "db:migrate": "node --env-file=.env packages/service/dist/main.js migrate",
     "benchmark": "node scripts/benchmark.mjs",
+    "docs:check": "node scripts/check-docs.mjs",
     "pack:release": "node scripts/pack.mjs",
     "dev:db": "node scripts/database.mjs",
     "dev:stop": "node scripts/database.mjs stop",
@@ -25,7 +26,7 @@
     "test:e2e": "node --test --test-concurrency=1 tests/e2e/*.test.mjs",
     "test:package": "node --test --test-concurrency=1 tests/e2e/package.test.mjs tests/e2e/copy-sdk.test.mjs",
     "test:integration": "node --test --test-concurrency=1 tests/integration/*.test.mjs",
-    "verify": "pnpm check && pnpm build && pnpm test:integration && pnpm test:e2e",
+    "verify": "pnpm check && pnpm build && pnpm test:integration && pnpm test:e2e && pnpm docs:check",
     "typecheck": "tsc --build"
   },
   "devDependencies": {
