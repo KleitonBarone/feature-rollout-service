@@ -145,6 +145,14 @@ export type BooleanFlag = Static<typeof BooleanFlagSchema>;
 export type MultivariateFlag = Static<typeof MultivariateFlagSchema>;
 export type Flag = Static<typeof FlagSchema>;
 export type Configuration = Static<typeof ConfigurationSchema>;
+export const ConfigurationV2Schema = Type.Composite(
+  [
+    Type.Omit(ConfigurationSchema, ["schemaVersion", "expiresAt"]),
+    Type.Object({ schemaVersion: Type.Literal("configuration-v2") }),
+  ],
+  { additionalProperties: false, $id: "ConfigurationV2" },
+);
+export type ConfigurationV2 = Static<typeof ConfigurationV2Schema>;
 export type BooleanAllocation = NonNullable<
   BooleanFlag["rollout"]
 >["allocations"][number];

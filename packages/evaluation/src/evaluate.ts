@@ -1,7 +1,5 @@
 import type {
-  AttributeValue,
   BooleanFlag,
-  Configuration,
   EvaluationContext,
   Flag,
   MultivariateFlag,
@@ -24,9 +22,7 @@ export const reasonCodes = [
   "FALLBACK_FLAG_NOT_FOUND",
   "FALLBACK_FLAG_TYPE_MISMATCH",
 ] as const;
-
 export type ReasonCode = (typeof reasonCodes)[number];
-
 export type EvaluationDetails<T> = {
   value: T;
   flagKey: string;
@@ -37,7 +33,6 @@ export type EvaluationDetails<T> = {
   bucket?: number;
   variantKey?: string;
 };
-
 export type EvaluationOptions<T> = {
   configuration: unknown;
   context: unknown;
@@ -45,290 +40,167 @@ export type EvaluationOptions<T> = {
   flagKey: string;
   now?: Date;
 };
+type Decision = {
+  serve: boolean | string;
+  reasonCode: ReasonCode;
+  ruleId?: string;
+  rolloutId?: string;
+  bucket?: number;
+};
 
-function matchesCondition(
-  context: EvaluationContext,
-  condition: {
-    attribute: string;
-    operator: "equals" | "not-equals";
-    value: AttributeValue;
-  },
-): boolean {
-  const actual = context.attributes?.[condition.attribute];
-  if (actual === undefined || typeof actual !== typeof condition.value) {
-    return false;
+function decide(flag: Flag, input: unknown, stale: boolean): Decision {
+  const defaultServe =
+    flag.type === "boolean" ? flag.defaultValue : flag.defaultVariant;
+  let context: EvaluationContext;
+  try {
+    context = parseEvaluationContext(input);
+  } catch (error) {
+    if (!(error instanceof ContractValidationError)) throw error;
+    return { serve: defaultServe, reasonCode: "DEFAULT_INVALID_CONTEXT" };
   }
-  const equal = actual === condition.value;
-  return condition.operator === "equals" ? equal : !equal;
+  if (stale)
+    return { serve: defaultServe, reasonCode: "DEFAULT_STALE_CONFIGURATION" };
+  for (const rule of flag.rules) {
+    if (
+      rule.conditions.every((condition) => {
+        const attributes = context.attributes;
+        if (!attributes || !Object.hasOwn(attributes, condition.attribute))
+          return false;
+        const actual = attributes[condition.attribute];
+        if (typeof actual !== typeof condition.value) return false;
+        return condition.operator === "equals"
+          ? actual === condition.value
+          : actual !== condition.value;
+      })
+    )
+      return {
+        serve: rule.serve,
+        reasonCode: "TARGETING_MATCH",
+        ruleId: rule.id,
+      };
+  }
+  if (!flag.rollout)
+    return { serve: defaultServe, reasonCode: "DEFAULT_NO_MATCH" };
+  const rollout = flag.rollout;
+  const value =
+    rollout.bucketBy === "targetingKey"
+      ? context.targetingKey
+      : context.attributes &&
+          Object.hasOwn(context.attributes, rollout.bucketBy)
+        ? context.attributes[rollout.bucketBy]
+        : undefined;
+  if (value === undefined)
+    return {
+      serve: defaultServe,
+      reasonCode: "DEFAULT_MISSING_BUCKET_ATTRIBUTE",
+    };
+  const bucket = assignmentBucket({
+    flagKey: flag.key,
+    salt: rollout.salt,
+    value,
+  });
+  const allocations: readonly { serve: boolean | string; weight: number }[] =
+    rollout.allocations;
+  return {
+    serve: selectAllocation(allocations, bucket).serve,
+    reasonCode: "PERCENTAGE_MATCH",
+    rolloutId: rollout.id,
+    bucket,
+  };
 }
 
-function matchesRule(
-  context: EvaluationContext,
-  rule: { conditions: readonly Parameters<typeof matchesCondition>[1][] },
-): boolean {
-  return rule.conditions.every((condition) =>
-    matchesCondition(context, condition),
-  );
+export function evaluateBooleanFlag(
+  flag: BooleanFlag,
+  context: unknown,
+  version: number,
+  stale = false,
+): EvaluationDetails<boolean> {
+  const { serve, ...details } = decide(flag, context, stale);
+  if (typeof serve !== "boolean")
+    throw new Error("Invalid validated boolean decision");
+  return {
+    value: serve,
+    flagKey: flag.key,
+    configurationVersion: version,
+    ...details,
+  };
 }
 
-function bucketValue(
-  context: EvaluationContext,
-  bucketBy: string,
-): AttributeValue | undefined {
-  return bucketBy === "targetingKey"
-    ? context.targetingKey
-    : context.attributes?.[bucketBy];
+export function evaluateMultivariateFlag(
+  flag: MultivariateFlag,
+  context: unknown,
+  version: number,
+  stale = false,
+): EvaluationDetails<string> {
+  const { serve, ...details } = decide(flag, context, stale);
+  const variant = flag.variants.find((candidate) => candidate.key === serve);
+  if (!variant) throw new Error("Invalid validated variant decision");
+  return {
+    value: variant.value,
+    variantKey: variant.key,
+    flagKey: flag.key,
+    configurationVersion: version,
+    ...details,
+  };
 }
 
-function baseDetails<T>(
-  value: T,
-  flagKey: string,
-  reasonCode: ReasonCode,
-  configurationVersion?: number,
-): EvaluationDetails<T> {
-  return configurationVersion === undefined
-    ? { value, flagKey, reasonCode }
-    : { value, flagKey, reasonCode, configurationVersion };
-}
-
-function prepare<T, F extends Flag>(
+function evaluate<T, F extends Flag>(
   options: EvaluationOptions<T>,
-  isExpectedType: (flag: Flag) => flag is F,
-):
-  { configuration: Configuration; flag: F } | { result: EvaluationDetails<T> } {
-  let configuration: Configuration;
+  matches: (flag: Flag) => flag is F,
+  evaluator: (
+    flag: F,
+    context: unknown,
+    version: number,
+    stale: boolean,
+  ) => EvaluationDetails<T>,
+): EvaluationDetails<T> {
+  let configuration;
   try {
     configuration = parseConfiguration(options.configuration);
   } catch (error) {
     if (!(error instanceof ContractValidationError)) throw error;
     return {
-      result: baseDetails(
-        options.fallbackValue,
-        options.flagKey,
-        "FALLBACK_INVALID_CONFIGURATION",
-      ),
+      value: options.fallbackValue,
+      flagKey: options.flagKey,
+      reasonCode: "FALLBACK_INVALID_CONFIGURATION",
     };
   }
-
   const flag = configuration.flags.find(
     (candidate) => candidate.key === options.flagKey,
   );
-  if (!flag) {
+  if (!flag || !matches(flag))
     return {
-      result: baseDetails(
-        options.fallbackValue,
-        options.flagKey,
-        "FALLBACK_FLAG_NOT_FOUND",
-        configuration.configurationVersion,
-      ),
+      value: options.fallbackValue,
+      flagKey: options.flagKey,
+      configurationVersion: configuration.configurationVersion,
+      reasonCode: flag
+        ? "FALLBACK_FLAG_TYPE_MISMATCH"
+        : "FALLBACK_FLAG_NOT_FOUND",
     };
-  }
-  if (!isExpectedType(flag)) {
-    return {
-      result: baseDetails(
-        options.fallbackValue,
-        options.flagKey,
-        "FALLBACK_FLAG_TYPE_MISMATCH",
-        configuration.configurationVersion,
-      ),
-    };
-  }
-
-  return { configuration, flag };
-}
-
-function validContext(input: unknown): EvaluationContext | undefined {
-  try {
-    return parseEvaluationContext(input);
-  } catch (error) {
-    if (!(error instanceof ContractValidationError)) throw error;
-    return undefined;
-  }
-}
-
-function variantValue(flag: MultivariateFlag, variantKey: string): string {
-  const variant = flag.variants.find(
-    (candidate) => candidate.key === variantKey,
+  const now = (options.now ?? new Date()).getTime();
+  return evaluator(
+    flag,
+    options.context,
+    configuration.configurationVersion,
+    !Number.isFinite(now) || now >= Date.parse(configuration.expiresAt),
   );
-  if (!variant) {
-    throw new Error(
-      `Validated flag ${flag.key} is missing variant ${variantKey}`,
-    );
-  }
-  return variant.value;
-}
-
-function isStale(configuration: Configuration, now: Date): boolean {
-  return now.getTime() >= Date.parse(configuration.expiresAt);
 }
 
 export function evaluateBoolean(
   options: EvaluationOptions<boolean>,
 ): EvaluationDetails<boolean> {
-  const prepared = prepare(
+  return evaluate(
     options,
     (flag): flag is BooleanFlag => flag.type === "boolean",
-  );
-  if ("result" in prepared) return prepared.result;
-
-  const { configuration, flag } = prepared;
-  const context = validContext(options.context);
-  if (!context) {
-    return baseDetails(
-      flag.defaultValue,
-      flag.key,
-      "DEFAULT_INVALID_CONTEXT",
-      configuration.configurationVersion,
-    );
-  }
-  if (isStale(configuration, options.now ?? new Date())) {
-    return baseDetails(
-      flag.defaultValue,
-      flag.key,
-      "DEFAULT_STALE_CONFIGURATION",
-      configuration.configurationVersion,
-    );
-  }
-
-  for (const rule of flag.rules) {
-    if (matchesRule(context, rule)) {
-      return {
-        ...baseDetails(
-          rule.serve,
-          flag.key,
-          "TARGETING_MATCH",
-          configuration.configurationVersion,
-        ),
-        ruleId: rule.id,
-      };
-    }
-  }
-
-  if (flag.rollout) {
-    const value = bucketValue(context, flag.rollout.bucketBy);
-    if (value === undefined) {
-      return baseDetails(
-        flag.defaultValue,
-        flag.key,
-        "DEFAULT_MISSING_BUCKET_ATTRIBUTE",
-        configuration.configurationVersion,
-      );
-    }
-    const bucket = assignmentBucket({
-      flagKey: flag.key,
-      salt: flag.rollout.salt,
-      value,
-    });
-    const allocation = selectAllocation(flag.rollout.allocations, bucket);
-    return {
-      ...baseDetails(
-        allocation.serve,
-        flag.key,
-        "PERCENTAGE_MATCH",
-        configuration.configurationVersion,
-      ),
-      rolloutId: flag.rollout.id,
-      bucket,
-    };
-  }
-
-  return baseDetails(
-    flag.defaultValue,
-    flag.key,
-    "DEFAULT_NO_MATCH",
-    configuration.configurationVersion,
+    evaluateBooleanFlag,
   );
 }
-
 export function evaluateMultivariate(
   options: EvaluationOptions<string>,
 ): EvaluationDetails<string> {
-  const prepared = prepare(
+  return evaluate(
     options,
     (flag): flag is MultivariateFlag => flag.type === "multivariate",
+    evaluateMultivariateFlag,
   );
-  if ("result" in prepared) return prepared.result;
-
-  const { configuration, flag } = prepared;
-  const defaultVariant = flag.defaultVariant;
-  const context = validContext(options.context);
-  if (!context) {
-    return {
-      ...baseDetails(
-        variantValue(flag, defaultVariant),
-        flag.key,
-        "DEFAULT_INVALID_CONTEXT",
-        configuration.configurationVersion,
-      ),
-      variantKey: defaultVariant,
-    };
-  }
-  if (isStale(configuration, options.now ?? new Date())) {
-    return {
-      ...baseDetails(
-        variantValue(flag, defaultVariant),
-        flag.key,
-        "DEFAULT_STALE_CONFIGURATION",
-        configuration.configurationVersion,
-      ),
-      variantKey: defaultVariant,
-    };
-  }
-
-  for (const rule of flag.rules) {
-    if (matchesRule(context, rule)) {
-      return {
-        ...baseDetails(
-          variantValue(flag, rule.serve),
-          flag.key,
-          "TARGETING_MATCH",
-          configuration.configurationVersion,
-        ),
-        ruleId: rule.id,
-        variantKey: rule.serve,
-      };
-    }
-  }
-
-  if (flag.rollout) {
-    const value = bucketValue(context, flag.rollout.bucketBy);
-    if (value === undefined) {
-      return {
-        ...baseDetails(
-          variantValue(flag, defaultVariant),
-          flag.key,
-          "DEFAULT_MISSING_BUCKET_ATTRIBUTE",
-          configuration.configurationVersion,
-        ),
-        variantKey: defaultVariant,
-      };
-    }
-    const bucket = assignmentBucket({
-      flagKey: flag.key,
-      salt: flag.rollout.salt,
-      value,
-    });
-    const allocation = selectAllocation(flag.rollout.allocations, bucket);
-    return {
-      ...baseDetails(
-        variantValue(flag, allocation.serve),
-        flag.key,
-        "PERCENTAGE_MATCH",
-        configuration.configurationVersion,
-      ),
-      rolloutId: flag.rollout.id,
-      bucket,
-      variantKey: allocation.serve,
-    };
-  }
-
-  return {
-    ...baseDetails(
-      variantValue(flag, defaultVariant),
-      flag.key,
-      "DEFAULT_NO_MATCH",
-      configuration.configurationVersion,
-    ),
-    variantKey: defaultVariant,
-  };
 }

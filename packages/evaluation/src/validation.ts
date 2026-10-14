@@ -2,8 +2,10 @@ import { Value } from "@sinclair/typebox/value";
 
 import {
   ConfigurationSchema,
+  ConfigurationV2Schema,
   EvaluationContextSchema,
   type Configuration,
+  type ConfigurationV2,
   type EvaluationContext,
   type Flag,
 } from "./model.js";
@@ -19,7 +21,10 @@ export class ContractValidationError extends Error {
 }
 
 function structuralIssues(
-  schema: typeof ConfigurationSchema | typeof EvaluationContextSchema,
+  schema:
+    | typeof ConfigurationSchema
+    | typeof ConfigurationV2Schema
+    | typeof EvaluationContextSchema,
   input: unknown,
 ): string[] {
   return [...Value.Errors(schema, input)].map(
@@ -64,15 +69,20 @@ function validateFlagReferences(flag: Flag): string[] {
   return issues;
 }
 
-function semanticConfigurationIssues(configuration: Configuration): string[] {
+function semanticConfigurationIssues(
+  configuration: Configuration | ConfigurationV2,
+): string[] {
   const issues: string[] = [];
   const generatedAt = canonicalTimestamp(configuration.generatedAt);
-  const expiresAt = canonicalTimestamp(configuration.expiresAt);
+  const expiresAt =
+    "expiresAt" in configuration
+      ? canonicalTimestamp(configuration.expiresAt)
+      : undefined;
 
   if (generatedAt === undefined) {
     issues.push("generatedAt must be a canonical UTC timestamp");
   }
-  if (expiresAt === undefined) {
+  if ("expiresAt" in configuration && expiresAt === undefined) {
     issues.push("expiresAt must be a canonical UTC timestamp");
   }
   if (
@@ -124,6 +134,7 @@ function canonicalTimestamp(value: string): number | undefined {
 }
 
 export function parseConfiguration(input: unknown): Configuration {
+  assertJSON(input);
   const issues = structuralIssues(ConfigurationSchema, input);
   if (issues.length > 0) {
     throw new ContractValidationError("Invalid configuration", issues);
@@ -139,10 +150,71 @@ export function parseConfiguration(input: unknown): Configuration {
 }
 
 export function parseEvaluationContext(input: unknown): EvaluationContext {
+  assertJSON(input);
   const issues = structuralIssues(EvaluationContextSchema, input);
   if (issues.length > 0) {
     throw new ContractValidationError("Invalid evaluation context", issues);
   }
 
   return input as EvaluationContext;
+}
+
+export function parseConfigurationV2(input: unknown): ConfigurationV2 {
+  assertJSON(input);
+  if (!Value.Check(ConfigurationV2Schema, input))
+    throw new ContractValidationError(
+      "Invalid configuration",
+      structuralIssues(ConfigurationV2Schema, input),
+    );
+  const issues = semanticConfigurationIssues(input);
+  if (issues.length)
+    throw new ContractValidationError("Invalid configuration", issues);
+  return input;
+}
+
+/** Rejects non-JSON runtime values and strings that RFC 8785 cannot serialize. */
+export function assertJSON(input: unknown, parents = new Set<object>()): void {
+  const invalid = () => {
+    throw new ContractValidationError("Unsupported JSON value", [
+      "Use plain JSON, finite safe numbers, and well-formed Unicode.",
+    ]);
+  };
+  if (input === null || typeof input === "boolean") return;
+  if (typeof input === "string") {
+    if (!input.isWellFormed()) invalid();
+    return;
+  }
+  if (typeof input === "number") {
+    if (
+      !Number.isFinite(input) ||
+      (Number.isInteger(input) && !Number.isSafeInteger(input))
+    )
+      invalid();
+    return;
+  }
+  if (typeof input !== "object") return invalid();
+  if (
+    !Array.isArray(input) &&
+    Object.getPrototypeOf(input) !== Object.prototype &&
+    Object.getPrototypeOf(input) !== null
+  )
+    invalid();
+  if (parents.has(input)) return invalid();
+  if (Object.getOwnPropertySymbols(input).length) return invalid();
+  parents.add(input);
+  for (const [key, descriptor] of Object.entries(
+    Object.getOwnPropertyDescriptors(input),
+  )) {
+    if (Array.isArray(input) && key === "length") continue;
+    if (
+      !key.isWellFormed() ||
+      !("value" in descriptor) ||
+      !descriptor.enumerable
+    )
+      invalid();
+    assertJSON(descriptor.value as unknown, parents);
+  }
+  if (Array.isArray(input) && Object.keys(input).length !== input.length)
+    invalid();
+  parents.delete(input);
 }
