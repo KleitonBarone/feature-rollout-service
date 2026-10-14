@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   serializeConfigurationV2,
   type ConfigurationV2,
@@ -33,6 +33,55 @@ function response(input: ConfigurationV2 = configuration) {
   });
 }
 describe("SDK freshness and invalid updates", () => {
+  it("polls automatically and releases its scheduler at shutdown", async () => {
+    vi.useFakeTimers();
+    let body = configuration;
+    let calls = 0;
+    const client = new RolloutClient({
+      url: "http://localhost",
+      token: "synthetic-token",
+      environment: "test",
+      refreshIntervalMs: 100,
+      fetch: () => {
+        calls++;
+        return Promise.resolve(response(body));
+      },
+    });
+    try {
+      await client.start();
+      expect(calls).toBe(1);
+      body = { ...configuration, configurationVersion: 2 };
+      await vi.advanceTimersByTimeAsync(110);
+      expect(client.status().version).toBe(2);
+      await client.close();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      await client.close();
+      vi.useRealTimers();
+    }
+  });
+  it("bounds initialization and rejects waiters on close", async () => {
+    vi.useFakeTimers();
+    const client = new RolloutClient({
+      url: "http://localhost",
+      token: "synthetic-token",
+      environment: "test",
+      initializationTimeoutMs: 100,
+      fetch: () => Promise.resolve(new Response(null, { status: 503 })),
+    });
+    try {
+      const startup = expect(client.start()).rejects.toThrow("timed out");
+      await vi.advanceTimersByTimeAsync(101);
+      await startup;
+      const waiter = expect(client.waitForReady()).rejects.toThrow("closed");
+      await client.close();
+      await waiter;
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      await client.close();
+      vi.useRealTimers();
+    }
+  });
   it("uses local checks, renews a matching 304, defaults at the exact age, and recovers", async () => {
     let now = 0;
     let requests = 0;

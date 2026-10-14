@@ -141,13 +141,20 @@ export class Store {
     return environment;
   }
   configuration(name: string, flags: unknown, version = 1): ConfigurationV2 {
-    return parseConfigurationV2({
+    const configuration = parseConfigurationV2({
       schemaVersion: "configuration-v2",
       environment: name,
       configurationVersion: version,
       generatedAt: new Date().toISOString(),
       flags,
     });
+    if (configuration.flags.length > 1000)
+      throw new ServiceError(
+        400,
+        "LIMIT_EXCEEDED",
+        "At most 1000 flags per environment",
+      );
+    return configuration;
   }
   async audit(
     client: PoolClient,

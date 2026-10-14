@@ -1,4 +1,5 @@
 import { mkdtemp, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer } from "node:net";
@@ -42,9 +43,12 @@ export async function startPostgres({ directory, port } = {}) {
       log += `${String(message)}\n`;
     },
   });
+  let started = false;
   try {
-    await database.initialise();
+    if (!existsSync(join(databaseDir, "PG_VERSION")))
+      await database.initialise();
     await database.start();
+    started = true;
     const connection = database.getPgClient();
     await connection.connect();
     const exists = await connection.query(
@@ -53,7 +57,7 @@ export async function startPostgres({ directory, port } = {}) {
     if (!exists.rowCount) await database.createDatabase("rollout");
     await connection.end();
   } catch (error) {
-    await database.stop().catch(() => undefined);
+    if (started) await database.stop().catch(() => undefined);
     if (temporary) await rm(databaseDir, { recursive: true, force: true });
     throw new Error(`Local PostgreSQL failed.\n${log}`, { cause: error });
   }

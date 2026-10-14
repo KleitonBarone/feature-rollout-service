@@ -9,6 +9,11 @@
   "scripts": {
     "build": "tsc --build packages/evaluation/tsconfig.build.json packages/service/tsconfig.build.json packages/sdk-node/tsconfig.build.json",
     "dev": "node scripts/dev.mjs",
+    "demo": "node scripts/demo.mjs",
+    "start": "node --env-file=.env packages/service/dist/main.js",
+    "db:migrate": "node --env-file=.env packages/service/dist/main.js migrate",
+    "benchmark": "node scripts/benchmark.mjs",
+    "pack:release": "node scripts/pack.mjs",
     "dev:db": "node scripts/database.mjs",
     "dev:stop": "node scripts/database.mjs stop",
     "check": "tsc --build packages/evaluation/tsconfig.build.json packages/service/tsconfig.build.json packages/sdk-node/tsconfig.build.json && prettier --check . && eslint . && tsc --build && vitest run",

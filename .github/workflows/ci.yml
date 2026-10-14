@@ -28,3 +28,25 @@ jobs:
       - run: pnpm build
       - run: pnpm test:integration
       - run: pnpm test:e2e
+  image:
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_PASSWORD: synthetic-ci-database-password
+      ROLLOUT_CREDENTIALS: '[{"token":"synthetic-ci-management-token","actor":"ci","permission":"write","environments":["*"]}]'
+    steps:
+      - uses: actions/checkout@v6
+      - run: docker build -t feature-rollout:test .
+      - run: |
+          docker compose -f compose.release.yaml up -d --wait postgres
+          docker compose -f compose.release.yaml run --rm service node dist/main.js migrate
+          docker compose -f compose.release.yaml up -d --wait service
+          curl --fail -H 'Authorization: Bearer synthetic-ci-management-token' -H 'Content-Type: application/json' -d '{"name":"restore-test"}' http://127.0.0.1:3100/v1/environments
+          docker compose -f compose.release.yaml exec -T postgres pg_dump -U rollout -d rollout -Fc > /tmp/rollout.dump
+          docker compose -f compose.release.yaml exec -T postgres psql -U rollout -d postgres -c 'CREATE DATABASE restored'
+          docker compose -f compose.release.yaml exec -T postgres pg_restore -U rollout -d restored < /tmp/rollout.dump
+          docker compose -f compose.release.yaml run --rm -e DATABASE_URL=postgresql://rollout:synthetic-ci-database-password@postgres:5432/restored service node dist/main.js migrate
+          docker compose -f compose.release.yaml exec -T postgres psql -U rollout -d restored -c "SELECT actor FROM audit_events WHERE environment='restore-test'"
+      - if: always()
+        run: |
+          docker compose -f compose.release.yaml logs
+          docker compose -f compose.release.yaml down --volumes

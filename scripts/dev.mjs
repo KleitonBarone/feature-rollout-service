@@ -9,11 +9,13 @@ const children = [
       "node_modules/typescript/bin/tsc",
       "--build",
       "packages/evaluation/tsconfig.build.json",
+      "packages/service/tsconfig.build.json",
+      "packages/sdk-node/tsconfig.build.json",
       "--watch",
     ],
     { stdio: "inherit", windowsHide: true },
   ),
-  spawn(process.execPath, ["--watch", "examples/evaluation.mjs"], {
+  spawn(process.execPath, ["--watch", "scripts/demo.mjs"], {
     stdio: "inherit",
     windowsHide: true,
   }),

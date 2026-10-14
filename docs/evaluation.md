@@ -56,7 +56,7 @@ With valid configuration and the correct evaluation type, unmatched rules, a mis
 
 Configuration becomes stale at `now >= expiresAt`. Pass `now` when replaying decisions or testing boundaries. Otherwise evaluation uses current time, so reaching expiry can change a result even when flag content and attributes stay unchanged.
 
-This describes evaluation semantics. SDK caching is future work. The [completion plan](implementation-plan.md#phase-2-freeze-the-evaluation-and-freshness-contracts) separates immutable publication from transport freshness in a new version and preserves v1 behavior.
+This describes the compatible v1 evaluator. Published `configuration-v2` omits `expiresAt`; `prepareSnapshot` validates, copies, freezes, and indexes it once. Explicit stale state controls default selection. The [SDK](sdk.md) tracks freshness since authenticated validation, including matching `304` responses. See [ADR 0004](decisions/0004-publication-freshness.md).
 
 ## Evaluation details
 

@@ -1,7 +1,19 @@
 {
   "name": "@feature-rollout/sdk-node",
   "version": "0.1.0",
-  "private": true,
+  "description": "Local feature flags with authenticated refresh and safe defaults",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KleitonBarone/feature-rollout-service.git",
+    "directory": "packages/sdk-node"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "files": [
     "dist",

@@ -107,6 +107,12 @@ export async function createService({
   if (!Value.Check(CredentialsSchema, credentials))
     throw new Error("Invalid credentials configuration");
   const authenticated = new WeakMap<FastifyRequest, Credential>();
+  const metrics = {
+    requests: 0,
+    failures: 0,
+    notModified: 0,
+    publicationRequests: 0,
+  };
   const configured = credentials.map((credential) => ({
     credential,
     hash: createHash("sha256").update(credential.token).digest(),
@@ -164,6 +170,18 @@ export async function createService({
               : "Service temporarily unavailable",
       requestId: request.id,
     });
+  });
+  app.addHook("onResponse", (request, reply, done) => {
+    metrics.requests++;
+    if (reply.statusCode >= 400) metrics.failures++;
+    if (reply.statusCode === 304) metrics.notModified++;
+    if (
+      request.method === "POST" &&
+      reply.statusCode === 200 &&
+      /\/(publish|kill|rollback)$/.test(request.url)
+    )
+      metrics.publicationRequests++;
+    done();
   });
   app.addHook("onRequest", (request, _reply, done) => {
     if (request.url === "/health/live" || request.url === "/health/ready") {
@@ -230,6 +248,25 @@ export async function createService({
     authorize(request, "*", true);
     return app.swagger();
   });
+  app.get(
+    "/v1/metrics",
+    {
+      schema: {
+        response: response(
+          Type.Object({
+            requests: Revision,
+            failures: Revision,
+            notModified: Revision,
+            publicationRequests: Revision,
+          }),
+        ),
+      },
+    },
+    (request) => {
+      authorize(request, "*", true);
+      return metrics;
+    },
+  );
   app.post(
     "/v1/environments",
     {

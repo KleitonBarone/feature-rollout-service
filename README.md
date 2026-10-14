@@ -1,40 +1,41 @@
 # Feature Rollout Service
 
-Feature Rollout Service is being built for teams that want to roll out features gradually in Node.js applications. The intended workflow is to publish flag configuration once, then evaluate it locally in your application with stable user assignment and explicit defaults during outages.
+Feature Rollout Service is a self-hosted feature-flag service for Node.js applications. Publish a flag, target users or roll it out by percentage, and evaluate it locally through a TypeScript SDK. Flag checks keep working during outages and return explicit defaults when cached configuration becomes stale.
 
-The evaluator works today. The configuration service and installable SDK are still planned, so this repository is currently for trying the evaluation model or contributing to its development.
+The service and SDK work as a release candidate. Public npm packages and a published image are pending release setup.
 
-## Try what works today
+## Try it locally
 
 Use Node.js 24 and pnpm 11. From a checkout of this repository:
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm check
-pnpm build
+pnpm demo
 ```
 
-The tests exercise targeting, percentage assignment, defaults, and configuration validation. Follow the [local evaluation example](docs/evaluation.md#try-the-evaluator) to run a flag check and inspect its reason.
-
-There is no package-registry installation or running service quickstart yet. Those are requirements of the [completion plan](docs/implementation-plan.md).
+Open `http://127.0.0.1:3101/?subject=synthetic-user-42`. The demo starts PostgreSQL, publishes a flag through the API, and runs an application using the SDK. Try another synthetic subject to see stable percentage assignment. Docker is optional. Stop with Ctrl+C; demonstration data stays in `.local/demo-postgres`.
 
 ## What does it do?
 
-The current evaluator supports:
+You can use:
 
 - Boolean flags and multivariate flags with string values.
 - Ordered attribute rules with typed comparisons.
 - Deterministic percentage rollouts for stable targeting keys.
 - Declared flag defaults and typed caller fallbacks.
 - Decision details that identify the rule, rollout, or default used.
+- Separate environments, scoped credentials, immutable publication, and audit history.
+- Kill and rollback operations, SDK polling, and recovery after outages.
 
-The first release will add environment management, immutable publication, audit history, and a TypeScript SDK with local caching and background refresh. Your application will evaluate flags without a network request for each check.
+Your application makes no HTTP request for each flag check. Updates arrive through background polling; a disconnected client cannot receive an immediate remote kill.
 
 ## Where to go next
 
-- [Evaluation reference and example](docs/evaluation.md) for the behavior implemented today.
-- [Roadmap](ROADMAP.md) for status and the order of work.
-- [Implementation plan](docs/implementation-plan.md) for the path to a usable first release, starting with development and end-to-end testing.
+- [SDK integration](docs/sdk.md) for application setup, defaults, and lifecycle.
+- [Management API](docs/api.md) for publishing and inspecting flags.
+- [Running the service](docs/operations.md) for containers, credentials, upgrades, and backups.
+- [Contributing](CONTRIBUTING.md) for the development loop and `pnpm verify`.
+- [Roadmap](ROADMAP.md) for implementation and release status.
 
 The first release focuses on one self-hosted service and one Node.js SDK. A management UI, experimentation statistics, browser SDKs, and multi-region replication are outside that scope.
 

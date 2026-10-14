@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:17.10-bookworm
+    environment:
+      POSTGRES_USER: rollout
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: rollout
+    volumes: ["postgres-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rollout -d rollout"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  service:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://rollout:${POSTGRES_PASSWORD}@postgres:5432/rollout
+      ROLLOUT_CREDENTIALS: ${ROLLOUT_CREDENTIALS:?Set scoped credentials}
+    ports: ["127.0.0.1:3100:3100"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3100/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+volumes:
+  postgres-data:
