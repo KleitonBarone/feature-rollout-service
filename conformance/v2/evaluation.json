@@ -1,0 +1,213 @@
+{
+  "schemaVersion": "evaluation-conformance-v2",
+  "configuration": {
+    "schemaVersion": "configuration-v2",
+    "environment": "test",
+    "configurationVersion": 1,
+    "generatedAt": "2026-10-14T00:00:00.000Z",
+    "flags": [
+      {
+        "key": "not-equal",
+        "type": "boolean",
+        "defaultValue": false,
+        "rules": [
+          {
+            "id": "adult",
+            "serve": true,
+            "conditions": [
+              { "attribute": "age", "operator": "not-equals", "value": 18 }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "conjunction",
+        "type": "boolean",
+        "defaultValue": false,
+        "rules": [
+          {
+            "id": "both",
+            "serve": true,
+            "conditions": [
+              { "attribute": "region", "operator": "equals", "value": "BR" },
+              { "attribute": "plan", "operator": "equals", "value": "pro" }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "rule-before-rollout",
+        "type": "boolean",
+        "defaultValue": false,
+        "rules": [
+          {
+            "id": "off-first",
+            "serve": false,
+            "conditions": [
+              { "attribute": "region", "operator": "equals", "value": "BR" }
+            ]
+          },
+          {
+            "id": "on-second",
+            "serve": true,
+            "conditions": [
+              { "attribute": "region", "operator": "equals", "value": "BR" }
+            ]
+          }
+        ],
+        "rollout": {
+          "id": "all-on",
+          "salt": "stable",
+          "bucketBy": "targetingKey",
+          "allocations": [{ "serve": true, "weight": 100000 }]
+        }
+      },
+      {
+        "key": "checkout-flow",
+        "type": "multivariate",
+        "defaultVariant": "control",
+        "variants": [
+          { "key": "control", "value": "standard" },
+          { "key": "compact", "value": "dense" }
+        ],
+        "rules": [],
+        "rollout": {
+          "id": "half",
+          "salt": "rollout-1",
+          "bucketBy": "targetingKey",
+          "allocations": [
+            { "serve": "control", "weight": 50000 },
+            { "serve": "compact", "weight": 50000 }
+          ]
+        }
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "inequality ignores missing attributes",
+      "type": "boolean",
+      "key": "not-equal",
+      "context": { "schemaVersion": "evaluation-context-v1" },
+      "fallback": true,
+      "stale": false,
+      "value": false,
+      "reasonCode": "DEFAULT_NO_MATCH"
+    },
+    {
+      "name": "inequality ignores wrong types",
+      "type": "boolean",
+      "key": "not-equal",
+      "context": {
+        "schemaVersion": "evaluation-context-v1",
+        "attributes": { "age": "19" }
+      },
+      "fallback": true,
+      "stale": false,
+      "value": false,
+      "reasonCode": "DEFAULT_NO_MATCH"
+    },
+    {
+      "name": "inequality compares typed values",
+      "type": "boolean",
+      "key": "not-equal",
+      "context": {
+        "schemaVersion": "evaluation-context-v1",
+        "attributes": { "age": 19 }
+      },
+      "fallback": false,
+      "stale": false,
+      "value": true,
+      "reasonCode": "TARGETING_MATCH"
+    },
+    {
+      "name": "conjunction requires all conditions",
+      "type": "boolean",
+      "key": "conjunction",
+      "context": {
+        "schemaVersion": "evaluation-context-v1",
+        "attributes": { "region": "BR" }
+      },
+      "fallback": true,
+      "stale": false,
+      "value": false,
+      "reasonCode": "DEFAULT_NO_MATCH"
+    },
+    {
+      "name": "conjunction matches all conditions",
+      "type": "boolean",
+      "key": "conjunction",
+      "context": {
+        "schemaVersion": "evaluation-context-v1",
+        "attributes": { "region": "BR", "plan": "pro" }
+      },
+      "fallback": false,
+      "stale": false,
+      "value": true,
+      "reasonCode": "TARGETING_MATCH"
+    },
+    {
+      "name": "first off rule overrides later rule and 100 percent rollout",
+      "type": "boolean",
+      "key": "rule-before-rollout",
+      "context": {
+        "schemaVersion": "evaluation-context-v1",
+        "targetingKey": "subject-a",
+        "attributes": { "region": "BR" }
+      },
+      "fallback": true,
+      "stale": false,
+      "value": false,
+      "reasonCode": "TARGETING_MATCH"
+    },
+    {
+      "name": "single allocation serves everyone",
+      "type": "boolean",
+      "key": "rule-before-rollout",
+      "context": {
+        "schemaVersion": "evaluation-context-v1",
+        "targetingKey": "subject-a"
+      },
+      "fallback": false,
+      "stale": false,
+      "value": true,
+      "reasonCode": "PERCENTAGE_MATCH"
+    },
+    {
+      "name": "multivariate percentage resolves variant value",
+      "type": "multivariate",
+      "key": "checkout-flow",
+      "context": {
+        "schemaVersion": "evaluation-context-v1",
+        "targetingKey": "subject-a"
+      },
+      "fallback": "fallback",
+      "stale": false,
+      "value": "dense",
+      "reasonCode": "PERCENTAGE_MATCH"
+    },
+    {
+      "name": "multivariate missing bucket defaults",
+      "type": "multivariate",
+      "key": "checkout-flow",
+      "context": { "schemaVersion": "evaluation-context-v1" },
+      "fallback": "fallback",
+      "stale": false,
+      "value": "standard",
+      "reasonCode": "DEFAULT_MISSING_BUCKET_ATTRIBUTE"
+    },
+    {
+      "name": "multivariate stale state defaults",
+      "type": "multivariate",
+      "key": "checkout-flow",
+      "context": {
+        "schemaVersion": "evaluation-context-v1",
+        "targetingKey": "subject-a"
+      },
+      "fallback": "fallback",
+      "stale": true,
+      "value": "standard",
+      "reasonCode": "DEFAULT_STALE_CONFIGURATION"
+    }
+  ]
+}

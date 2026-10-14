@@ -2,6 +2,42 @@
   "schemaVersion": "hashing-conformance-v1",
   "cases": [
     {
+      "name": "string number is distinct",
+      "input": {
+        "flagKey": "checkout-flow",
+        "salt": "rollout-1",
+        "value": "42"
+      },
+      "expectedBucket": 95276
+    },
+    {
+      "name": "Unicode UTF-8",
+      "input": {
+        "flagKey": "checkout-flow",
+        "salt": "rollout-1",
+        "value": "subject-ação"
+      },
+      "expectedBucket": 15659
+    },
+    {
+      "name": "astral Unicode",
+      "input": {
+        "flagKey": "checkout-flow",
+        "salt": "rollout-1",
+        "value": "subject-😀"
+      },
+      "expectedBucket": 65202
+    },
+    {
+      "name": "fractional scalar",
+      "input": {
+        "flagKey": "checkout-flow",
+        "salt": "rollout-1",
+        "value": 1.5
+      },
+      "expectedBucket": 44454
+    },
+    {
       "name": "string subject a",
       "input": {
         "flagKey": "checkout-flow",

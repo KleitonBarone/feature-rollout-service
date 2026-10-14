@@ -7,11 +7,11 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "build": "tsc --build packages/evaluation/tsconfig.build.json packages/service/tsconfig.build.json",
+    "build": "tsc --build packages/evaluation/tsconfig.build.json packages/service/tsconfig.build.json packages/sdk-node/tsconfig.build.json",
     "dev": "node scripts/dev.mjs",
     "dev:db": "node scripts/database.mjs",
     "dev:stop": "node scripts/database.mjs stop",
-    "check": "prettier --check . && eslint . && tsc --build && vitest run",
+    "check": "tsc --build packages/evaluation/tsconfig.build.json packages/service/tsconfig.build.json packages/sdk-node/tsconfig.build.json && prettier --check . && eslint . && tsc --build && vitest run",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
