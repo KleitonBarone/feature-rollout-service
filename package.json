@@ -7,7 +7,7 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "build": "tsc --build packages/evaluation/tsconfig.build.json",
+    "build": "tsc --build packages/evaluation/tsconfig.build.json packages/service/tsconfig.build.json",
     "dev": "node scripts/dev.mjs",
     "dev:db": "node scripts/database.mjs",
     "dev:stop": "node scripts/database.mjs stop",
@@ -18,11 +18,14 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "node --test --test-concurrency=1 tests/e2e/*.test.mjs",
+    "test:integration": "node --test --test-concurrency=1 tests/integration/*.test.mjs",
+    "verify": "pnpm check && pnpm build && pnpm test:integration && pnpm test:e2e",
     "typecheck": "tsc --build"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@types/node": "24.13.3",
+    "@types/pg": "8.23.1",
     "embedded-postgres": "17.10.0-beta.17",
     "eslint": "10.9.1",
     "prettier": "3.9.6",

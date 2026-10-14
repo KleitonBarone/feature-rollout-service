@@ -1,0 +1,22 @@
+{
+  "name": "@feature-rollout/service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "dist",
+    "migrations",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc --build tsconfig.build.json"
+  },
+  "dependencies": {
+    "@feature-rollout/evaluation": "workspace:*",
+    "@sinclair/typebox": "catalog:",
+    "fastify": "5.12.7",
+    "@fastify/type-provider-typebox": "5.2.0",
+    "@fastify/swagger": "9.9.2",
+    "pg": "8.23.1"
+  }
+}
