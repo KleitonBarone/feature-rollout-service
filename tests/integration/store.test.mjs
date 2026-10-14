@@ -110,6 +110,13 @@ test(
       await store.close();
       store = new Store(database.connectionString);
       assert.equal((await store.publication("test")).version, 3);
+      await database.database.stop();
+      await assert.rejects(store.publication("test"));
+      await database.database.start();
+      assert.equal(
+        (await store.publication("test")).canonical,
+        rollback.canonical,
+      );
       assert.ok(
         (await store.events("test")).some(
           (event) => event.action === "rollback",

@@ -148,6 +148,12 @@ export class Store {
       generatedAt: new Date().toISOString(),
       flags,
     });
+    if (Buffer.byteLength(JSON.stringify(configuration)) > 1024 * 1024)
+      throw new ServiceError(
+        400,
+        "LIMIT_EXCEEDED",
+        "Configuration exceeds 1 MiB",
+      );
     if (configuration.flags.length > 1000)
       throw new ServiceError(
         400,
@@ -161,7 +167,7 @@ export class Store {
     environment: EnvironmentRow,
     actor: string,
     action: string,
-    details: Record<string, string | number> = {},
+    details: Record<string, unknown> = {},
   ) {
     await client.query(
       "INSERT INTO audit_events(environment,actor,action,revision,version,details) VALUES ($1,$2,$3,$4,$5,$6)",
@@ -220,6 +226,27 @@ export class Store {
       if (environment.revision !== expectedRevision)
         throw new ServiceError(409, "CONFLICT", "Draft revision changed");
       const draft = this.draftResult(environment);
+      const details: Record<string, unknown> =
+        operation.type === "put"
+          ? {
+              flagKey: operation.flag.key,
+              before:
+                draft.flags.find((flag) => flag.key === operation.flag.key) ??
+                null,
+              after: operation.flag,
+            }
+          : operation.type === "rebase"
+            ? {
+                previousBaseVersion: environment.base_version,
+                baseVersion: operation.activeVersion,
+              }
+            : {
+                flagKey: operation.key,
+                flag:
+                  [...draft.flags, ...draft.archivedFlags].find(
+                    (flag) => flag.key === operation.key,
+                  ) ?? null,
+              };
       if (operation.type === "put") {
         draft.flags = draft.flags.filter(
           (flag) => flag.key !== operation.flag.key,
@@ -260,7 +287,13 @@ export class Store {
           environment.base_version,
         ],
       );
-      await this.audit(client, environment, actor, `flag.${operation.type}`);
+      await this.audit(
+        client,
+        environment,
+        actor,
+        `flag.${operation.type}`,
+        details,
+      );
       return this.draftResult({
         ...environment,
         draft: JSON.stringify(draft.flags),
@@ -364,7 +397,14 @@ export class Store {
         "UPDATE environments SET active_version=$2,base_version=$3 WHERE name=$1",
         [name, version, environment.base_version],
       );
-      await this.audit(client, environment, actor, operation.type, { version });
+      await this.audit(client, environment, actor, operation.type, {
+        version,
+        ...(operation.type === "rollback"
+          ? { sourceVersion: operation.version }
+          : operation.type === "kill"
+            ? { flagKey: operation.key }
+            : {}),
+      });
       return publication;
     });
   }

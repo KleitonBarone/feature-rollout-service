@@ -41,11 +41,19 @@ jobs:
           docker compose -f compose.release.yaml run --rm service node dist/main.js migrate
           docker compose -f compose.release.yaml up -d --wait service
           curl --fail -H 'Authorization: Bearer synthetic-ci-management-token' -H 'Content-Type: application/json' -d '{"name":"restore-test"}' http://127.0.0.1:3100/v1/environments
+          curl --fail -X PUT -H 'Authorization: Bearer synthetic-ci-management-token' -H 'Content-Type: application/json' -d '{"expectedRevision":0,"flag":{"key":"example","type":"boolean","defaultValue":false,"rules":[]}}' http://127.0.0.1:3100/v1/environments/restore-test/flags/example
+          curl --fail -H 'Authorization: Bearer synthetic-ci-management-token' -H 'Content-Type: application/json' -d '{"expectedRevision":1,"expectedActiveVersion":0,"idempotencyKey":"initial"}' http://127.0.0.1:3100/v1/environments/restore-test/publish
           docker compose -f compose.release.yaml exec -T postgres pg_dump -U rollout -d rollout -Fc > /tmp/rollout.dump
           docker compose -f compose.release.yaml exec -T postgres psql -U rollout -d postgres -c 'CREATE DATABASE restored'
           docker compose -f compose.release.yaml exec -T postgres pg_restore -U rollout -d restored < /tmp/rollout.dump
           docker compose -f compose.release.yaml run --rm -e DATABASE_URL=postgresql://rollout:synthetic-ci-database-password@postgres:5432/restored service node dist/main.js migrate
           docker compose -f compose.release.yaml exec -T postgres psql -U rollout -d restored -c "SELECT actor FROM audit_events WHERE environment='restore-test'"
+          docker compose -f compose.release.yaml exec -T postgres psql -v ON_ERROR_STOP=1 -U rollout -d restored <<'SQL'
+          DO $$ BEGIN
+            IF (SELECT count(*) FROM publications WHERE environment='restore-test') <> 1 THEN RAISE EXCEPTION 'Publication restore failed'; END IF;
+            IF (SELECT count(*) FROM audit_events WHERE environment='restore-test') <> 3 THEN RAISE EXCEPTION 'Audit restore failed'; END IF;
+          END $$;
+          SQL
       - if: always()
         run: |
           docker compose -f compose.release.yaml logs

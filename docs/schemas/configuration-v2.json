@@ -1,0 +1,301 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "configurationVersion",
+    "environment",
+    "generatedAt",
+    "flags",
+    "schemaVersion"
+  ],
+  "properties": {
+    "configurationVersion": {
+      "minimum": 1,
+      "maximum": 9007199254740991,
+      "type": "integer"
+    },
+    "environment": {
+      "minLength": 1,
+      "maxLength": 128,
+      "type": "string"
+    },
+    "generatedAt": {
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$",
+      "type": "string"
+    },
+    "flags": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "additionalProperties": false,
+            "type": "object",
+            "required": ["key", "type", "defaultValue", "rules"],
+            "properties": {
+              "key": {
+                "minLength": 1,
+                "maxLength": 128,
+                "type": "string"
+              },
+              "type": {
+                "const": "boolean",
+                "type": "string"
+              },
+              "defaultValue": {
+                "type": "boolean"
+              },
+              "rules": {
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": ["id", "conditions", "serve"],
+                  "properties": {
+                    "id": {
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "type": "string"
+                    },
+                    "conditions": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": ["attribute", "operator", "value"],
+                        "properties": {
+                          "attribute": {
+                            "minLength": 1,
+                            "maxLength": 128,
+                            "type": "string"
+                          },
+                          "operator": {
+                            "anyOf": [
+                              {
+                                "const": "equals",
+                                "type": "string"
+                              },
+                              {
+                                "const": "not-equals",
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "serve": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              },
+              "rollout": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": ["id", "bucketBy", "salt", "allocations"],
+                "properties": {
+                  "id": {
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "type": "string"
+                  },
+                  "bucketBy": {
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "type": "string"
+                  },
+                  "salt": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "allocations": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": ["serve", "weight"],
+                      "properties": {
+                        "serve": {
+                          "type": "boolean"
+                        },
+                        "weight": {
+                          "minimum": 1,
+                          "maximum": 100000,
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "additionalProperties": false,
+            "type": "object",
+            "required": ["key", "type", "variants", "defaultVariant", "rules"],
+            "properties": {
+              "key": {
+                "minLength": 1,
+                "maxLength": 128,
+                "type": "string"
+              },
+              "type": {
+                "const": "multivariate",
+                "type": "string"
+              },
+              "variants": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": ["key", "value"],
+                  "properties": {
+                    "key": {
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "defaultVariant": {
+                "minLength": 1,
+                "maxLength": 128,
+                "type": "string"
+              },
+              "rules": {
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": ["id", "conditions", "serve"],
+                  "properties": {
+                    "id": {
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "type": "string"
+                    },
+                    "conditions": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": ["attribute", "operator", "value"],
+                        "properties": {
+                          "attribute": {
+                            "minLength": 1,
+                            "maxLength": 128,
+                            "type": "string"
+                          },
+                          "operator": {
+                            "anyOf": [
+                              {
+                                "const": "equals",
+                                "type": "string"
+                              },
+                              {
+                                "const": "not-equals",
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "serve": {
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "rollout": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": ["id", "bucketBy", "salt", "allocations"],
+                "properties": {
+                  "id": {
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "type": "string"
+                  },
+                  "bucketBy": {
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "type": "string"
+                  },
+                  "salt": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "allocations": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": ["serve", "weight"],
+                      "properties": {
+                        "serve": {
+                          "minLength": 1,
+                          "maxLength": 128,
+                          "type": "string"
+                        },
+                        "weight": {
+                          "minimum": 1,
+                          "maximum": 100000,
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "schemaVersion": {
+      "const": "configuration-v2",
+      "type": "string"
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:feature-rollout:configuration-v2"
+}
