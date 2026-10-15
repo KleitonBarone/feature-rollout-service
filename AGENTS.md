@@ -28,12 +28,11 @@ Use Node.js 24 and pnpm 11. Run these commands from the repository root:
 
 - `pnpm format:check` verifies formatting.
 - `pnpm lint` runs ESLint.
-- `pnpm typecheck` runs strict TypeScript project checks.
-- `pnpm test` runs the focused Vitest suite and conformance fixtures.
-- `pnpm build` emits the evaluation package.
-- `pnpm check` runs formatting, linting, type checking, and tests.
+- `pnpm typecheck` builds required evaluator declarations, then runs strict TypeScript project checks. No prior build is required.
+- `pnpm test` runs the focused Vitest suite and conformance fixtures against maintained source, including SDK imports of the evaluator. No prior build is required.
+- `pnpm check` runs source tests before type checking, formatting, and linting, matching the fresh-checkout CI gate.
 - `pnpm test:e2e` verifies installed package artifacts in an external consumer.
-- `pnpm dev` watches the working example; `pnpm test:watch` watches focused tests.
+- `pnpm test:watch` watches focused source tests and follows evaluator changes into SDK tests.
 - `pnpm dev:db` starts owned local PostgreSQL. Test databases must use disposable native clusters, never a deployment `DATABASE_URL`.
 - `pnpm verify` is the full gate, including real PostgreSQL/HTTP and installed SDK tests.
 - `pnpm artifacts:check` detects stale SDK files and portable schemas without replacing them. `pnpm test:sdk-copy` tests the existing folder. Run these before SDK regeneration in CI.

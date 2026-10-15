@@ -24,7 +24,8 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm check
+      - name: Test source before building workspace declarations
+        run: pnpm check
       - run: pnpm artifacts:check
       - run: pnpm test:sdk-copy
       - run: pnpm build
