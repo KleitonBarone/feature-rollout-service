@@ -71,7 +71,7 @@ Complete [plan phases 2 through 5](docs/implementation-plan.md#phase-2-freeze-th
 - [x] Require completed migrations with matching checksums for readiness.
 - [x] Test the documented publication and copied-application quickstart as an external consumer.
 - [x] Lead evaluation guidance with v2 and explain observed revocation versus disconnected cache expiry.
-- [ ] Rehearse the updated container and restore workflow locally through WSL, then confirm task-resource cleanup.
+- [x] Rehearse the updated container and restore workflow locally through WSL, then confirm task-resource cleanup.
 
 ## Later, if justified
 
