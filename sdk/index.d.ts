@@ -290,7 +290,7 @@ type Bootstrap = {
     configuration: ConfigurationV2;
     validatedAt: number;
 };
-type Observer<T extends object> = (value: Readonly<T>) => void | Promise<void>;
+type Observer<T extends object> = (value: Readonly<T>) => unknown;
 type ClientOptions = {
     url: string;
     token: string;

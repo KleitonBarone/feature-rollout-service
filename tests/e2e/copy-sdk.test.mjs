@@ -18,7 +18,7 @@ test(
       );
       await writeFile(
         join(directory, "consumer.ts"),
-        `import {RolloutClient} from './sdk/index.js';\nconst client = new RolloutClient({url:'http://localhost',token:'synthetic-token',environment:'demo'});\nconst value: boolean = client.boolean('missing',{},false);\nif(value!==false)throw new Error('Bad fallback');\nconsole.log(value);\nawait client.close();`,
+        `import {RolloutClient} from './sdk/index.js';\nconst client = new RolloutClient({url:'http://localhost',token:'synthetic-token',environment:'demo',onStatus:status=>status.state,onEvaluation:details=>Promise.resolve(details.reasonCode)});\nconst value: boolean = client.boolean('missing',{},false);\nif(value!==false)throw new Error('Bad fallback');\nconsole.log(value);\nawait client.close();`,
       );
       await run(
         process.execPath,
