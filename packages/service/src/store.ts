@@ -464,7 +464,7 @@ export class Store {
         revision: number;
         version: number;
         created_at: Date;
-        details: unknown;
+        details: Record<string, unknown>;
       }>(
         "SELECT id::text,actor,action,revision,version,created_at,details FROM audit_events WHERE environment=$1 AND id>$2::bigint ORDER BY id LIMIT $3",
         [name, after, limit],

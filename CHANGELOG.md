@@ -5,6 +5,7 @@
 - Detect stale copied SDK artifacts and portable schemas before regenerating them.
 - Isolate SDK observer payloads and contain synchronous and asynchronous observer errors.
 - Reject unsafe context accessors and deeply nested invalid input without throwing from evaluation. Callback payload types are now readonly; flag schemas, reason codes, and percentage hashes are unchanged.
+- Align HTTP routing with 128-character identifiers, return client errors for malformed JSON and unsupported media types, and describe audit responses in OpenAPI.
 
 ## 0.1.0
 

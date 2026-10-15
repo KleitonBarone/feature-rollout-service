@@ -29,9 +29,10 @@ function withoutIds<T extends TSchema>(input: T): T {
 const FlagSchema = withoutIds(ContractFlagSchema);
 const ConfigurationV2Schema = withoutIds(ContractConfigurationSchema);
 
+const identifierMaxLength = 128;
 const Identifier = Type.String({
   minLength: 1,
-  maxLength: 128,
+  maxLength: identifierMaxLength,
   pattern: "^[a-zA-Z0-9][a-zA-Z0-9_.-]*$",
 });
 const Revision = Type.Integer({ minimum: 0, maximum: 2147483646 });
@@ -64,6 +65,18 @@ const PublicationSchema = Type.Object({
   version: Revision,
   digest: Type.String(),
 });
+const AuditEventSchema = Type.Object(
+  {
+    id: Type.String({ pattern: "^[0-9]+$" }),
+    actor: Identifier,
+    action: Type.String(),
+    revision: Revision,
+    version: Revision,
+    created_at: Type.String({ format: "date-time" }),
+    details: Type.Record(Type.String(), Type.Unknown()),
+  },
+  { additionalProperties: false },
+);
 const CredentialSchema = Type.Object(
   {
     token: Type.String({ minLength: 16 }),
@@ -88,6 +101,7 @@ const failures = {
   409: Failure,
   410: Failure,
   413: Failure,
+  415: Failure,
   503: Failure,
 };
 const response = <T extends TSchema>(schema: T) => ({
@@ -118,6 +132,7 @@ export async function createService({
     hash: createHash("sha256").update(credential.token).digest(),
   }));
   const app = Fastify({
+    routerOptions: { maxParamLength: identifierMaxLength },
     bodyLimit: 1024 * 1024,
     requestTimeout: 10000,
     logger: logger
@@ -136,20 +151,20 @@ export async function createService({
     },
   });
   app.setErrorHandler((error, request, reply) => {
-    const status =
-      error instanceof ServiceError
-        ? error.status
-        : error instanceof ContractValidationError ||
-            (typeof error === "object" &&
-              error !== null &&
-              "validation" in error)
-          ? 400
-          : typeof error === "object" &&
-              error !== null &&
-              "statusCode" in error &&
-              error.statusCode === 413
-            ? 413
-            : 503;
+    let status = 503;
+    if (error instanceof ServiceError) status = error.status;
+    else if (
+      error instanceof ContractValidationError ||
+      error instanceof Fastify.errorCodes.FST_ERR_CTP_INVALID_JSON_BODY ||
+      error instanceof Fastify.errorCodes.FST_ERR_CTP_EMPTY_JSON_BODY ||
+      error instanceof Fastify.errorCodes.FST_ERR_CTP_INVALID_CONTENT_LENGTH ||
+      (typeof error === "object" && error !== null && "validation" in error)
+    )
+      status = 400;
+    else if (error instanceof Fastify.errorCodes.FST_ERR_CTP_BODY_TOO_LARGE)
+      status = 413;
+    else if (error instanceof Fastify.errorCodes.FST_ERR_CTP_INVALID_MEDIA_TYPE)
+      status = 415;
     const code =
       error instanceof ServiceError
         ? error.code
@@ -157,7 +172,9 @@ export async function createService({
           ? "INVALID_INPUT"
           : status === 413
             ? "BODY_TOO_LARGE"
-            : "SERVICE_UNAVAILABLE";
+            : status === 415
+              ? "UNSUPPORTED_MEDIA_TYPE"
+              : "SERVICE_UNAVAILABLE";
     reply.code(status).send({
       code,
       message:
@@ -167,7 +184,9 @@ export async function createService({
             ? "Request failed validation"
             : status === 413
               ? "Request exceeds size limit"
-              : "Service temporarily unavailable",
+              : status === 415
+                ? "Unsupported request content type"
+                : "Service temporarily unavailable",
       requestId: request.id,
     });
   });
@@ -560,14 +579,24 @@ export async function createService({
   );
   app.get(
     "/v1/environments/:environment/audit",
-    { schema: { params: Params, querystring: pagination } },
+    {
+      schema: {
+        params: Params,
+        querystring: pagination,
+        response: response(Type.Array(AuditEventSchema)),
+      },
+    },
     async (request) => {
       authorize(request, request.params.environment, true);
-      return store.events(
+      const events = await store.events(
         request.params.environment,
         request.query.after ?? "0",
         Math.max(1, Math.min(100, Number(request.query.limit ?? 50))),
       );
+      return events.map((event) => ({
+        ...event,
+        created_at: event.created_at.toISOString(),
+      }));
     },
   );
   await app.ready();
