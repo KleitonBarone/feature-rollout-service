@@ -19,6 +19,6 @@ const enabled = client.boolean(
 await client.close();
 ```
 
-Requires Node.js 24 and ESM. No runtime dependencies or registry installation are needed. JavaScript, TypeScript declarations, license, and third-party notices are included. See the repository's `docs/sdk.md` for lifecycle and failure behavior.
+Requires Node.js 24 and ESM. No runtime dependencies or registry installation are needed. JavaScript, TypeScript declarations, license, and third-party notices are included. Start with the repository's `docs/quickstart.md` for service setup and publication, then `docs/sdk.md` for lifecycle and failure behavior.
 
 The maintained source is `packages/sdk-node` and `packages/evaluation`. `pnpm build` regenerates this folder's bundled code and declarations. Change the maintained source and rebuild rather than editing generated files.

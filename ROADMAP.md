@@ -62,6 +62,17 @@ Complete [plan phases 2 through 5](docs/implementation-plan.md#phase-2-freeze-th
 - [x] Verify local package entry points, supported runtime, reproducible builds, and changelog.
 - [x] Commit the standalone SDK folder and verify a clean consumer without npm or workspace dependencies.
 
+## Post-v1 review hardening
+
+- [x] Verify copied SDK artifacts and exported schemas before regeneration.
+- [x] Isolate observer callbacks, including rejected promises and readonly payloads.
+- [x] Default unsafe and deeply nested invalid context without executing getters.
+- [x] Align identifier limits, classify malformed requests, and describe audit responses.
+- [x] Require completed migrations with matching checksums for readiness.
+- [x] Test the documented publication and copied-application quickstart as an external consumer.
+- [x] Lead evaluation guidance with v2 and explain observed revocation versus disconnected cache expiry.
+- [ ] Rehearse the updated container and restore workflow locally through WSL, then confirm task-resource cleanup.
+
 ## Later, if justified
 
 - Additional server-side SDKs.

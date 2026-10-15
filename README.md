@@ -31,6 +31,7 @@ Your application makes no HTTP request for each flag check. Updates arrive throu
 
 ## Where to go next
 
+- Follow the [integration quickstart](docs/quickstart.md) to publish a flag and run the copied SDK in your own application.
 - Copy [sdk/](sdk/README.md) into your application, then follow [SDK integration](docs/sdk.md).
 - [Management API](docs/api.md) for publishing and inspecting flags.
 - [Running the service](docs/operations.md) for containers, credentials, upgrades, and backups.

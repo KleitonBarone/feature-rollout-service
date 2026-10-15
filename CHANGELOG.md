@@ -7,6 +7,7 @@
 - Reject unsafe context accessors and deeply nested invalid input without throwing from evaluation. Callback payload types are now readonly; flag schemas, reason codes, and percentage hashes are unchanged.
 - Align HTTP routing with 128-character identifiers, return client errors for malformed JSON and unsupported media types, and describe audit responses in OpenAPI.
 - Require completed migrations with matching checksums for readiness, without applying migrations during health checks.
+- Add a tested fresh-service-to-copied-SDK quickstart with separate read credentials, current v2 evaluation guidance, and accurate revocation timing.
 
 ## 0.1.0
 

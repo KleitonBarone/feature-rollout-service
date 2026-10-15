@@ -2,6 +2,8 @@
 
 Run `pnpm install --frozen-lockfile` and `pnpm demo` for a local demonstration. It starts owned PostgreSQL, migrates a dedicated database, publishes through HTTP, and serves an application at localhost:3101. It never reads deployment database settings.
 
+For a complete fresh-service-to-application walkthrough, follow the [integration quickstart](quickstart.md).
+
 For a separate native service, run `pnpm dev:db`, copy `.env.example` to `.env`, and set `ROLLOUT_CREDENTIALS` to a JSON array:
 
 ```json
@@ -50,7 +52,7 @@ Scoped management credentials can inspect local aggregate counters through `/v1/
 
 ## Troubleshooting
 
-- `401/403`: check credential scope. Revocation immediately activates declared defaults in clients with cached configuration.
+- `401/403`: check credential scope. Clients activate declared defaults as soon as a refresh receives the rejection, not when the operator changes credentials. Disconnected clients retain usable cached behavior until maximum age. With default settings, polling is every 30 seconds with 10% jitter and maximum age is five minutes. Feature flags are not application authorization.
 - `409`: refetch draft and active versions. After kill/rollback, review pending edits and explicitly rebase before publishing.
 - `503`: check storage/readiness. SDK checks continue locally until maximum age.
 - `VERSION_REGRESSION`: investigate restored storage or altered bytes.
