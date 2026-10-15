@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Validate publication lookups, history cursors, and rollback targets against storage integer bounds, returning `400` instead of misleading storage failures. Keep audit cursors as separate decimal strings.
 - Prevent observed credential rejection or environment archival from becoming fresh SDK bootstrap data. Successful revalidation restores export; transient failures never renew bootstrap age.
 - Detect stale copied SDK artifacts and portable schemas before regenerating them.
 - Isolate SDK observer payloads and contain synchronous and asynchronous observer errors.

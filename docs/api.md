@@ -24,6 +24,8 @@ Publish, kill, and rollback require `expectedRevision`, `expectedActiveVersion`,
 
 History and audit accept `after` and `limit` strings. They sort ascending. Use the last version or audit ID as the next cursor; page size is capped at 100. Errors contain `code`, safe `message`, and `requestId`, never SQL errors or tokens.
 
+Publication path versions and rollback `version` targets range from 1 through 2147483647. Publication-history `after` cursors range from 0 through 2147483647. Audit cursors are separate decimal strings of 1 to 16 digits and are not converted through JavaScript numbers. Out-of-range publication numbers return `400 INVALID_INPUT`; valid but absent publication versions return `404`. These storage bounds do not change the portable evaluation schemas.
+
 Environment names and flag path keys use 1 to 128 ASCII letters, digits, dots, underscores, or hyphens, starting with a letter or digit. Malformed JSON and schema errors return `400`, bodies over 1 MiB return `413`, and unsupported request content types return `415`. Storage failures return `503`.
 
 Audit entries contain decimal-string `id`, `actor`, `action`, `revision`, `version`, UTC `created_at`, and a `details` object. OpenAPI describes the response and standard errors. IDs stay strings so clients do not lose integer precision.

@@ -36,6 +36,28 @@ const Identifier = Type.String({
   pattern: "^[a-zA-Z0-9][a-zA-Z0-9_.-]*$",
 });
 const Revision = Type.Integer({ minimum: 0, maximum: 2147483646 });
+const publicationVersionMax = 2147483647;
+const PublicationVersion = Type.Integer({
+  minimum: 1,
+  maximum: publicationVersionMax,
+});
+
+/** Bound transport values to storage integers, independently of the evaluator contract. */
+function publicationNumber(value: string): number {
+  const number = Number(value);
+  if (
+    !Number.isSafeInteger(number) ||
+    number < 0 ||
+    number > publicationVersionMax
+  )
+    throw new ServiceError(
+      400,
+      "INVALID_INPUT",
+      "Publication version or cursor is out of range",
+    );
+  return number;
+}
+
 const Params = Type.Object(
   { environment: Identifier },
   { additionalProperties: false },
@@ -62,7 +84,7 @@ const DraftSchema = Type.Object({
 });
 const PublicationSchema = Type.Object({
   environment: Identifier,
-  version: Revision,
+  version: PublicationVersion,
   digest: Type.String(),
 });
 const AuditEventSchema = Type.Object(
@@ -448,7 +470,7 @@ export async function createService({
       schema: {
         params: Params,
         body: Type.Composite(
-          [PublishBody, Type.Object({ version: Type.Integer({ minimum: 1 }) })],
+          [PublishBody, Type.Object({ version: PublicationVersion })],
           { additionalProperties: false },
         ),
         response: response(PublicationSchema),
@@ -531,7 +553,12 @@ export async function createService({
       schema: {
         params: Type.Object({
           environment: Identifier,
-          version: Type.String({ pattern: "^[1-9][0-9]*$" }),
+          version: Type.String({
+            pattern: "^[1-9][0-9]*$",
+            maxLength: 10,
+            description:
+              "Decimal publication version from 1 through 2147483647.",
+          }),
         }),
         response: { 200: ConfigurationV2Schema, ...failures },
       },
@@ -540,7 +567,7 @@ export async function createService({
       authorize(request, request.params.environment, true);
       const publication = await store.publication(
         request.params.environment,
-        Number(request.params.version),
+        publicationNumber(request.params.version),
       );
       return reply
         .type("application/json")
@@ -550,10 +577,23 @@ export async function createService({
         );
     },
   );
-  const pagination = Type.Object(
+  const pageLimit = Type.Optional(Type.String({ pattern: "^[0-9]{1,3}$" }));
+  const publicationPagination = Type.Object(
+    {
+      after: Type.Optional(
+        Type.String({
+          pattern: "^[0-9]{1,16}$",
+          description: "Decimal publication cursor from 0 through 2147483647.",
+        }),
+      ),
+      limit: pageLimit,
+    },
+    { additionalProperties: false },
+  );
+  const auditPagination = Type.Object(
     {
       after: Type.Optional(Type.String({ pattern: "^[0-9]{1,16}$" })),
-      limit: Type.Optional(Type.String({ pattern: "^[0-9]{1,3}$" })),
+      limit: pageLimit,
     },
     { additionalProperties: false },
   );
@@ -562,9 +602,11 @@ export async function createService({
     {
       schema: {
         params: Params,
-        querystring: pagination,
+        querystring: publicationPagination,
         response: response(
-          Type.Array(Type.Object({ version: Revision, digest: Type.String() })),
+          Type.Array(
+            Type.Object({ version: PublicationVersion, digest: Type.String() }),
+          ),
         ),
       },
     },
@@ -572,7 +614,7 @@ export async function createService({
       authorize(request, request.params.environment, true);
       return store.history(
         request.params.environment,
-        Number(request.query.after ?? 0),
+        publicationNumber(request.query.after ?? "0"),
         Math.max(1, Math.min(100, Number(request.query.limit ?? 50))),
       );
     },
@@ -582,7 +624,7 @@ export async function createService({
     {
       schema: {
         params: Params,
-        querystring: pagination,
+        querystring: auditPagination,
         response: response(Type.Array(AuditEventSchema)),
       },
     },
