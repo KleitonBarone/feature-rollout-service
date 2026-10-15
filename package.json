@@ -14,6 +14,8 @@
     "db:migrate": "node --env-file=.env packages/service/dist/main.js migrate",
     "benchmark": "node scripts/benchmark.mjs",
     "docs:check": "node scripts/check-docs.mjs",
+    "schemas:generate": "node scripts/export-schemas.mjs",
+    "artifacts:check": "tsc --build packages/evaluation/tsconfig.build.json packages/sdk-node/tsconfig.build.json && node scripts/check-artifacts.mjs",
     "pack:release": "node scripts/pack.mjs",
     "dev:db": "node scripts/database.mjs",
     "dev:stop": "node scripts/database.mjs stop",
@@ -25,8 +27,9 @@
     "test:watch": "vitest",
     "test:e2e": "node --test --test-concurrency=1 tests/e2e/*.test.mjs",
     "test:package": "node --test --test-concurrency=1 tests/e2e/package.test.mjs tests/e2e/copy-sdk.test.mjs",
+    "test:sdk-copy": "node --test tests/e2e/copy-sdk.test.mjs",
     "test:integration": "node --test --test-concurrency=1 tests/integration/*.test.mjs",
-    "verify": "pnpm check && pnpm build && pnpm test:integration && pnpm test:e2e && pnpm docs:check",
+    "verify": "pnpm check && pnpm artifacts:check && pnpm test:sdk-copy && pnpm build && pnpm test:integration && pnpm test:e2e && pnpm docs:check",
     "typecheck": "tsc --build"
   },
   "devDependencies": {

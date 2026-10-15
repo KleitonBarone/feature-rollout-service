@@ -1,10 +1,13 @@
 import { writeFile, mkdir } from "node:fs/promises";
+import { join } from "node:path";
+import { format } from "prettier";
 import {
   ConfigurationSchema,
   ConfigurationV2Schema,
   EvaluationContextSchema,
 } from "../packages/evaluation/dist/index.js";
-await mkdir("docs/schemas", { recursive: true });
+const output = process.argv[2] ?? "docs/schemas";
+await mkdir(output, { recursive: true });
 for (const [name, schema] of Object.entries({
   "configuration-v1": ConfigurationSchema,
   "configuration-v2": ConfigurationV2Schema,
@@ -21,7 +24,7 @@ for (const [name, schema] of Object.entries({
   plain.$schema = "http://json-schema.org/draft-07/schema#";
   plain.$id = `urn:feature-rollout:${name}`;
   await writeFile(
-    `docs/schemas/${name}.json`,
-    JSON.stringify(plain, null, 2) + "\n",
+    join(output, `${name}.json`),
+    await format(JSON.stringify(plain), { parser: "json" }),
   );
 }

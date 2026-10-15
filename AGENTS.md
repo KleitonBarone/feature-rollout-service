@@ -36,6 +36,8 @@ Use Node.js 24 and pnpm 11. Run these commands from the repository root:
 - `pnpm dev` watches the working example; `pnpm test:watch` watches focused tests.
 - `pnpm dev:db` starts owned local PostgreSQL. Test databases must use disposable native clusters, never a deployment `DATABASE_URL`.
 - `pnpm verify` is the full gate, including real PostgreSQL/HTTP and installed SDK tests.
+- `pnpm artifacts:check` detects stale SDK files and portable schemas without replacing them. `pnpm test:sdk-copy` tests the existing folder. Run these before SDK regeneration in CI.
+- `pnpm schemas:generate` refreshes portable schemas after contract changes. Include generated SDK and schema changes with their maintained source.
 - `pnpm demo` runs the full localhost example; `pnpm dev` watches all three packages.
 - `pnpm build` regenerates the copyable `sdk/` JavaScript, declarations, and notices. Edit maintained source, not those generated files. SDK distribution is repository-only, never npm publishing.
 

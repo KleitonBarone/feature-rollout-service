@@ -25,6 +25,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
+      - run: pnpm artifacts:check
+      - run: pnpm test:sdk-copy
       - run: pnpm build
       - run: pnpm docs:check
       - run: pnpm test:integration

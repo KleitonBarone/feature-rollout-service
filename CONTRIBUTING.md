@@ -6,6 +6,8 @@ Install Node.js 24 and pnpm 11, then run `pnpm install --frozen-lockfile`.
 - `pnpm test:watch` runs focused tests on edits. Pass a test filename to select it.
 - `pnpm check` checks formatting, lint, types, and unit/conformance tests.
 - `pnpm verify` adds real PostgreSQL/HTTP integration and installed SDK end-to-end tests.
+- `pnpm artifacts:check` compares the existing SDK and portable schemas with freshly generated temporary output. `pnpm test:sdk-copy` tests the existing folder without rebuilding it. Both run before SDK regeneration in verification and CI.
+- After evaluator or SDK changes, run `pnpm build` and include the generated SDK. After schema changes, also run `pnpm schemas:generate`. These checks compare working files, so correct uncommitted updates are supported.
 - `pnpm build` regenerates the dependency-free `sdk/` folder. `pnpm test:package` verifies strict types and external consumers on Windows and Ubuntu. `pnpm benchmark` reports local costs.
 - `pnpm test:e2e` installs packed artifacts in a disposable external consumer.
 - `pnpm dev:db` runs native PostgreSQL on localhost:55432 with data in `.local/postgres`. Stop with Ctrl+C or `pnpm dev:stop`.

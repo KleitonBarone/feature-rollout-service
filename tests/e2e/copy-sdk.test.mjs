@@ -3,13 +3,12 @@ import assert from "node:assert/strict";
 import { cp, mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { run, pnpm } from "../../scripts/process.mjs";
+import { run } from "../../scripts/process.mjs";
 
 test(
   "copied SDK works without node_modules or workspace and has standalone declarations",
   { timeout: 60000 },
   async () => {
-    await pnpm(["build"]);
     const directory = await mkdtemp(join(tmpdir(), "frs-copy-"));
     try {
       await cp("sdk", join(directory, "sdk"), { recursive: true });

@@ -1,14 +1,16 @@
 import { build } from "esbuild";
 import { rollup } from "rollup";
 import { dts } from "rollup-plugin-dts";
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import ts from "typescript";
 const require = createRequire(import.meta.url);
+const output = resolve(process.argv[2] ?? "sdk");
+await mkdir(output, { recursive: true });
 await build({
   entryPoints: ["packages/sdk-node/dist/index.js"],
-  outfile: "sdk/index.js",
+  outfile: join(output, "index.js"),
   bundle: true,
   platform: "node",
   format: "esm",
@@ -41,12 +43,12 @@ const types = await rollup({
   external: (source) => source.startsWith("node:"),
 });
 try {
-  await types.write({ file: "sdk/index.d.ts", format: "es" });
+  await types.write({ file: join(output, "index.d.ts"), format: "es" });
 } finally {
   await types.close();
 }
 await writeFile(
-  "sdk/LICENSE",
+  join(output, "LICENSE"),
   (await readFile("LICENSE", "utf8")).replaceAll("\r\n", "\n"),
 );
 const typebox = resolve("packages/evaluation/node_modules/@sinclair/typebox");
@@ -57,6 +59,6 @@ const notices =
   "\n## json-canonicalize\n\n" +
   (await readFile(join(canonical, "LICENSE.md"), "utf8"));
 await writeFile(
-  "sdk/THIRD_PARTY_NOTICES.md",
+  join(output, "THIRD_PARTY_NOTICES.md"),
   notices.replaceAll("\r\n", "\n").replace(/[ \t]+$/gm, ""),
 );
