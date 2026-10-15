@@ -42,28 +42,45 @@ export type PublishInput = {
 const digest = (value: string) =>
   createHash("sha256").update(value).digest("hex");
 
+type Migration = { name: string; sql: string; digest: string };
+let migrationManifest: Promise<readonly Migration[]> | undefined;
+
+/** Read immutable build metadata once; applied database state is always queried live. */
+function requiredMigrations(): Promise<readonly Migration[]> {
+  migrationManifest ??= (async () => {
+    const directory = new URL("../migrations/", import.meta.url);
+    const names = (await readdir(directory))
+      .filter((name) => name.endsWith(".sql"))
+      .sort();
+    if (!names.length) throw new Error("No service migrations found");
+    return Promise.all(
+      names.map(async (name) => {
+        const sql = await readFile(new URL(name, directory), "utf8");
+        return { name, sql, digest: digest(sql) };
+      }),
+    );
+  })();
+  return migrationManifest;
+}
+
 export async function migrate(pool: Pool, through?: string): Promise<void> {
+  const migrations = await requiredMigrations();
+  if (through && !migrations.some((migration) => migration.name === through))
+    throw new Error("Unknown migration target");
   const client = await pool.connect();
   try {
     await client.query("SELECT pg_advisory_lock(71349011)");
     await client.query(
       "CREATE TABLE IF NOT EXISTS schema_migrations (name text PRIMARY KEY, digest text NOT NULL)",
     );
-    const directory = new URL("../migrations/", import.meta.url);
-    const migrations = (await readdir(directory))
-      .filter((name) => name.endsWith(".sql"))
-      .sort();
-    if (through && !migrations.includes(through))
-      throw new Error("Unknown migration target");
-    for (const name of migrations) {
+    for (const { name, sql, digest: expectedDigest } of migrations) {
       if (through && name > through) break;
-      const sql = await readFile(new URL(name, directory), "utf8");
       const existing = await client.query<{ digest: string }>(
         "SELECT digest FROM schema_migrations WHERE name=$1",
         [name],
       );
       if (existing.rows[0]) {
-        if (existing.rows[0].digest !== digest(sql))
+        if (existing.rows[0].digest !== expectedDigest)
           throw new Error(`Changed migration ${name}`);
         continue;
       }
@@ -72,7 +89,7 @@ export async function migrate(pool: Pool, through?: string): Promise<void> {
         await client.query(sql);
         await client.query(
           "INSERT INTO schema_migrations(name,digest) VALUES ($1,$2)",
-          [name, digest(sql)],
+          [name, expectedDigest],
         );
         await client.query("COMMIT");
       } catch (error) {
@@ -105,6 +122,24 @@ export class Store {
   }
   async migrate(through?: string) {
     await migrate(this.pool, through);
+  }
+  async ready(): Promise<void> {
+    const expected = await requiredMigrations();
+    const applied = await this.pool.query<{ name: string; digest: string }>(
+      "SELECT name,digest FROM schema_migrations WHERE name = ANY($1::text[])",
+      [expected.map((migration) => migration.name)],
+    );
+    const digests = new Map(applied.rows.map((row) => [row.name, row.digest]));
+    if (
+      expected.some(
+        (migration) => digests.get(migration.name) !== migration.digest,
+      )
+    )
+      throw new ServiceError(
+        503,
+        "SCHEMA_NOT_READY",
+        "Required database migrations are missing or changed",
+      );
   }
   async transaction<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {
     const client = await this.pool.connect();

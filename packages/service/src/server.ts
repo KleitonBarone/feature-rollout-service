@@ -259,7 +259,7 @@ export async function createService({
       },
     },
     async () => {
-      await store.pool.query("SELECT 1 FROM schema_migrations");
+      await store.ready();
       return { status: "ready" as const };
     },
   );

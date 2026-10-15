@@ -23,7 +23,7 @@ For a separate native service, run `pnpm dev:db`, copy `.env.example` to `.env`,
 
 Generate tokens with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`. Keep management tokens separate from scoped SDK tokens. Rotate by adding a credential, restarting the service, switching clients, and removing the old credential. Exposed deployments require TLS at a reverse proxy. Delivery remains authenticated.
 
-Run `pnpm build`, `pnpm db:migrate`, and `pnpm start`. Migrations are explicit, serialized by PostgreSQL advisory lock, and checked against recorded digests. Startup never migrates. `/health/live` reports process liveness; `/health/ready` checks storage and migrations. Add schema changes as new migrations.
+Run `pnpm build`, `pnpm db:migrate`, and `pnpm start`. Migrations are explicit, serialized by PostgreSQL advisory lock, and checked against recorded digests. Startup never migrates. `/health/live` reports process liveness. `/health/ready` queries storage and requires every migration in this build to have a matching recorded checksum. Empty, partial, or changed migration history returns `503`; health checks never apply migrations. Add schema changes as new migrations.
 
 ## Containers
 
