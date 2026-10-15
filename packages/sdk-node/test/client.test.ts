@@ -33,6 +33,132 @@ function response(input: ConfigurationV2 = configuration) {
   });
 }
 describe("SDK freshness and invalid updates", () => {
+  it.each([401, 403, 410])(
+    "does not export snapshots invalidated by HTTP %i",
+    async (status) => {
+      let mode = 200;
+      const options = {
+        url: "http://localhost",
+        token: "synthetic-token",
+        environment: "test",
+        fetch: () =>
+          Promise.resolve(
+            mode === 200
+              ? response()
+              : new Response(null, {
+                  status: mode,
+                  ...(mode === 304
+                    ? {
+                        headers: { etag: response().headers.get("etag") ?? "" },
+                      }
+                    : {}),
+                }),
+          ),
+      };
+      const client = new RolloutClient(options);
+      try {
+        expect(await client.refresh()).toBe(true);
+        expect(client.exportSnapshot()?.configuration).toEqual(configuration);
+        mode = status;
+        expect(await client.refresh()).toBe(false);
+        expect(
+          client.booleanDetails("feature", { targetingKey: "subject-a" }, true),
+        ).toMatchObject({
+          value: false,
+          reasonCode: "DEFAULT_STALE_CONFIGURATION",
+        });
+        expect(client.exportSnapshot()).toBeUndefined();
+
+        mode = 503;
+        expect(await client.refresh()).toBe(false);
+        const bootstrap = client.exportSnapshot();
+        const restarted = new RolloutClient({
+          ...options,
+          ...(bootstrap ? { bootstrap } : {}),
+        });
+        try {
+          expect(await restarted.refresh()).toBe(false);
+          expect(restarted.status().state).not.toBe("ready");
+          expect(
+            restarted.booleanDetails(
+              "feature",
+              { targetingKey: "subject-a" },
+              false,
+            ),
+          ).toMatchObject({
+            value: false,
+            reasonCode: "FALLBACK_INVALID_CONFIGURATION",
+          });
+        } finally {
+          await restarted.close();
+        }
+
+        for (const success of [304, 200]) {
+          mode = status;
+          await client.refresh();
+          expect(client.exportSnapshot()).toBeUndefined();
+          mode = success;
+          expect(await client.refresh()).toBe(true);
+          expect(client.status().state).toBe("ready");
+          expect(client.exportSnapshot()?.configuration).toEqual(configuration);
+        }
+        mode = status;
+        await client.refresh();
+        await client.close();
+        expect(client.exportSnapshot()).toBeUndefined();
+      } finally {
+        await client.close();
+      }
+    },
+  );
+  it("preserves bootstrap age through transient failures and rejects it at expiry", async () => {
+    vi.useFakeTimers();
+    let now = 0;
+    let unavailable = false;
+    const options = {
+      url: "http://localhost",
+      token: "synthetic-token",
+      environment: "test",
+      now: () => now,
+      maxAgeMs: 100,
+      fetch: () =>
+        Promise.resolve(
+          unavailable ? new Response(null, { status: 503 }) : response(),
+        ),
+    };
+    const client = new RolloutClient(options);
+    let restarted: RolloutClient | undefined;
+    try {
+      await client.refresh();
+      const bootstrap = client.exportSnapshot();
+      expect(bootstrap).toBeDefined();
+      unavailable = true;
+      now = 50;
+      await vi.advanceTimersByTimeAsync(50);
+      expect(await client.refresh()).toBe(false);
+      expect(client.exportSnapshot()).toEqual(bootstrap);
+      restarted = new RolloutClient({
+        ...options,
+        ...(bootstrap ? { bootstrap } : {}),
+      });
+      await restarted.start();
+      expect(restarted.status().state).toBe("ready");
+      now = 100;
+      await vi.advanceTimersByTimeAsync(50);
+      expect(restarted.status().state).toBe("stale");
+      expect(
+        () =>
+          new RolloutClient({
+            ...options,
+            ...(bootstrap ? { bootstrap } : {}),
+          }),
+      ).toThrow("Bootstrap is stale");
+    } finally {
+      await restarted?.close();
+      await client.close();
+      vi.useRealTimers();
+    }
+  });
   it("isolates evaluation results from observers for both flag types", async () => {
     const client = new RolloutClient({
       url: "http://localhost",

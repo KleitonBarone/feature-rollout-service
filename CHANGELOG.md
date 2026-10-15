@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Prevent observed credential rejection or environment archival from becoming fresh SDK bootstrap data. Successful revalidation restores export; transient failures never renew bootstrap age.
 - Detect stale copied SDK artifacts and portable schemas before regenerating them.
 - Isolate SDK observer payloads and contain synchronous and asynchronous observer errors.
 - Reject unsafe context accessors and deeply nested invalid input without throwing from evaluation. Callback payload types are now readonly; flag schemas, reason codes, and percentage hashes are unchanged.

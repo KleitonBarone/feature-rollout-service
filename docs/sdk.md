@@ -33,6 +33,8 @@ Before usable configuration, for absent flags, or for wrong typed access, the ca
 
 Context must be plain JSON data, without accessors or a caller-supplied `schemaVersion`. Invalid context uses declared defaults without executing getters. Validation bounds traversal of malformed nested data; valid flag and context schemas are unchanged.
 
-`exportSnapshot()` provides caller-managed bootstrap data and its last validation time. `bootstrap` requires a matching environment and recent timestamp. It does not renew age; there is no implicit disk cache. Rotate credentials by constructing a new client.
+`exportSnapshot()` provides caller-managed bootstrap data and its last validation time. It returns `undefined` before configuration is available or after an observed `401`, `403`, or `410`, including after close. Export becomes available again after a valid authenticated `200` or matching `304`. Cached definitions still provide declared defaults while invalidated.
+
+If you persist bootstrap data, clear the saved copy when export returns `undefined`; do not reuse an older export to bypass observed invalidation. Previously exported files are caller-managed and cannot be remotely revoked while disconnected. `bootstrap` requires a matching environment and recent timestamp. It does not renew age, and transient failures preserve the original validation time. There is no implicit disk cache. Rotate credentials by constructing a new client.
 
 Remote kills arrive after polling and cannot immediately reach disconnected applications. Feature flags must not replace application authorization.

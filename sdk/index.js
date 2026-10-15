@@ -6820,8 +6820,9 @@ var RolloutClient = class {
   multivariate(key, context, fallbackValue) {
     return this.multivariateDetails(key, context, fallbackValue).value;
   }
+  /** Observed revocation prevents bootstrap export until successful revalidation. */
   exportSnapshot() {
-    return this.snapshot ? {
+    return this.snapshot && !this.forcedStale ? {
       configuration: structuredClone(this.snapshot.configuration),
       validatedAt: this.verifiedAt
     } : void 0;

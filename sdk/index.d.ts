@@ -342,6 +342,7 @@ declare class RolloutClient {
     boolean(key: string, context: Context, fallbackValue: boolean): boolean;
     multivariateDetails(key: string, context: Context, fallbackValue: string): EvaluationDetails<string>;
     multivariate(key: string, context: Context, fallbackValue: string): string;
+    /** Observed revocation prevents bootstrap export until successful revalidation. */
     exportSnapshot(): Bootstrap | undefined;
     close(): Promise<void>;
 }
