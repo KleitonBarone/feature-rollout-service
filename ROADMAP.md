@@ -72,6 +72,9 @@ Complete [plan phases 2 through 5](docs/implementation-plan.md#phase-2-freeze-th
 - [x] Test the documented publication and copied-application quickstart as an external consumer.
 - [x] Lead evaluation guidance with v2 and explain observed revocation versus disconnected cache expiry.
 - [x] Rehearse the updated container and restore workflow locally through WSL, then confirm task-resource cleanup.
+- [x] Run source tests and build-aware type checks from a fresh checkout, with evaluator changes reaching SDK watch tests.
+- [x] Prevent invalidated SDK snapshots from becoming bootstrap data; verify revalidation and unchanged outage age.
+- [x] Bound publication lookup, history, and rollback inputs before storage queries, keeping audit cursors separate.
 
 ## Later, if justified
 

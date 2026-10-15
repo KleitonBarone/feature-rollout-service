@@ -2,7 +2,7 @@
 
 Implemented on 2026-10-14. The reference runtime is Node.js 24. The runtime packages use strict TypeScript.
 
-- `pnpm verify` passed on 2026-10-15 with 53 unit/conformance cases, seven PostgreSQL/HTTP cases, four external-consumer scenarios, artifact comparisons, and documentation checks.
+- `pnpm verify` passed on 2026-10-15 with 57 unit/conformance cases, ten PostgreSQL/HTTP cases, four external-consumer scenarios, artifact comparisons, and documentation checks.
 - The copied `sdk/` works with no `node_modules`, no monorepo links, and strict declaration checking. Its real-service test proves targeting, stable buckets, zero network calls per check, conditional refresh, kill, rollback, stale defaults, and recovery.
 - PostgreSQL tests cover concurrency, idempotency, immutable audit/publication storage, pending drafts, populated migration from 001 to 002, and database stop/start recovery.
 - Ubuntu CI runs full database and integration suites. Windows CI checks source/types and external package/copy use. Windows native PostgreSQL also passes locally under an unprivileged account. Elevated CI Windows accounts are not suitable PostgreSQL owners.
@@ -16,6 +16,14 @@ The integration quickstart executes the maintained publish, copy, and applicatio
 The updated container workflow also passed locally through Docker in WSL Ubuntu on 2026-10-15. It built the non-root image, applied migrations, published through authenticated HTTP, restored a binary backup into an independent database, checked readiness against restored migration history, and verified one publication and three audit events. Existing host networks exhausted Docker's automatic address pools, so this rehearsal used a checked, explicit temporary subnet and host-matched MTU. It changed no daemon settings or existing networks.
 
 Both the initial failed network allocation and the successful rehearsal cleaned their owned resources. Final inspection found no task containers, networks, volumes, images, builders, or temporary backup files. Docker reported zero image, container, volume, and build-cache usage; unrelated pre-existing networks remained untouched.
+
+## Second review
+
+- A disposable fresh checkout passed `pnpm test` without evaluator build output, then passed `pnpm typecheck` without a manual build. Watch mode reran evaluator and SDK tests after an evaluator source edit and its reversal. CI now runs source tests before building declarations. The disposable checkout was moved to the Windows Recycle Bin after its watcher exited.
+- SDK regressions first failed because `401`, `403`, and `410` still allowed bootstrap export. All 13 SDK tests now pass, including rejection followed by an outage and restart, revalidation through `200` and matching `304`, and exact bootstrap expiry without renewed age.
+- PostgreSQL/HTTP regressions first returned `503` instead of `400` for oversized lookup versions, history cursors, and rollback targets. They now verify integer boundaries, safe errors, unchanged drafts/history after rejected rollbacks, and separate string audit cursors above the int32 and JavaScript safe-integer limits.
+
+The full gate passed after these fixes. The copied SDK matches maintained source, and portable schemas and percentage hashes remain unchanged. Database tests removed their disposable clusters; no local Docker resources were needed for this round.
 
 ## Measured workload
 
