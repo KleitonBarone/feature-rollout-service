@@ -27,7 +27,9 @@ Default polling is 30 seconds with 10% jitter, a two-second request timeout, and
 
 Before usable configuration, for absent flags, or for wrong typed access, the caller fallback wins. At maximum age or with invalid context, declared defaults win. `401`, `403`, and `410` immediately mark cached configuration stale. After close, cached flag definitions still provide declared defaults; without them caller fallbacks apply.
 
-`status()` reports idle/loading/ready/stale/closed, version, and safe last error. Optional `onStatus` and `onEvaluation` callbacks run locally; callback failures cannot change decisions. `status()` observes expiry even between refreshes.
+`status()` reports idle/loading/ready/stale/closed, version, and safe last error. Optional `onStatus` and `onEvaluation` callbacks receive frozen readonly copies and run locally. They may return promises; neither thrown errors nor rejected promises change decisions or readiness. Evaluation never waits for a callback. `status()` observes expiry even between refreshes.
+
+Context must be plain JSON data, without accessors or a caller-supplied `schemaVersion`. Invalid context uses declared defaults without executing getters. Validation bounds traversal of malformed nested data; valid flag and context schemas are unchanged.
 
 `exportSnapshot()` provides caller-managed bootstrap data and its last validation time. `bootstrap` requires a matching environment and recent timestamp. It does not renew age; there is no implicit disk cache. Rotate credentials by constructing a new client.
 

@@ -6379,12 +6379,14 @@ function parseConfigurationV2(input) {
     throw new ContractValidationError("Invalid configuration", issues);
   return input;
 }
-function assertJSON(input, parents = /* @__PURE__ */ new Set()) {
+function assertJSON(input, parents = /* @__PURE__ */ new Set(), depth = 0) {
   const invalid = () => {
     throw new ContractValidationError("Unsupported JSON value", [
       "Use plain JSON, finite safe numbers, and well-formed Unicode."
     ]);
   };
+  if (depth > 32)
+    return invalid();
   if (input === null || typeof input === "boolean")
     return;
   if (typeof input === "string") {
@@ -6411,7 +6413,7 @@ function assertJSON(input, parents = /* @__PURE__ */ new Set()) {
       continue;
     if (!key.isWellFormed() || !("value" in descriptor) || !descriptor.enumerable)
       invalid();
-    assertJSON(descriptor.value, parents);
+    assertJSON(descriptor.value, parents, depth + 1);
   }
   if (Array.isArray(input) && Object.keys(input).length !== input.length)
     invalid();
@@ -6565,6 +6567,32 @@ function prepareSnapshot(input) {
 }
 
 // packages/sdk-node/dist/index.js
+function notifyObserver(observer, value) {
+  if (!observer)
+    return;
+  try {
+    const pending = observer(Object.freeze({ ...value }));
+    if (pending)
+      void Promise.resolve(pending).catch(() => void 0);
+  } catch {
+  }
+}
+function versionContext(context) {
+  try {
+    const prototype = Object.getPrototypeOf(context);
+    if (prototype !== Object.prototype && prototype !== null)
+      return void 0;
+    const descriptors = Object.getOwnPropertyDescriptors(context);
+    if (Object.hasOwn(descriptors, "schemaVersion"))
+      return void 0;
+    return Object.create(prototype, {
+      ...descriptors,
+      schemaVersion: { value: "evaluation-context-v1", enumerable: true }
+    });
+  } catch {
+    return void 0;
+  }
+}
 var RolloutClient = class {
   options;
   snapshot;
@@ -6637,16 +6665,13 @@ var RolloutClient = class {
   }
   notify() {
     const status = this.status();
-    try {
-      this.options.onStatus?.(status);
-    } catch {
-    }
     if (status.state === "ready")
       for (const waiter of this.waiters) {
         clearTimeout(waiter.timer);
         waiter.resolve();
         this.waiters.delete(waiter);
       }
+    notifyObserver(this.options.onStatus, status);
   }
   async start() {
     if (this.closed)
@@ -6772,30 +6797,24 @@ var RolloutClient = class {
     }
   }
   booleanDetails(key, context, fallbackValue) {
-    const result = this.snapshot?.boolean(key, { ...context, schemaVersion: "evaluation-context-v1" }, fallbackValue, this.status().state !== "ready") ?? {
+    const result = this.snapshot?.boolean(key, versionContext(context), fallbackValue, this.status().state !== "ready") ?? {
       flagKey: key,
       value: fallbackValue,
       reasonCode: "FALLBACK_INVALID_CONFIGURATION"
     };
-    try {
-      this.options.onEvaluation?.(result);
-    } catch {
-    }
+    notifyObserver(this.options.onEvaluation, result);
     return result;
   }
   boolean(key, context, fallbackValue) {
     return this.booleanDetails(key, context, fallbackValue).value;
   }
   multivariateDetails(key, context, fallbackValue) {
-    const result = this.snapshot?.multivariate(key, { ...context, schemaVersion: "evaluation-context-v1" }, fallbackValue, this.status().state !== "ready") ?? {
+    const result = this.snapshot?.multivariate(key, versionContext(context), fallbackValue, this.status().state !== "ready") ?? {
       flagKey: key,
       value: fallbackValue,
       reasonCode: "FALLBACK_INVALID_CONFIGURATION"
     };
-    try {
-      this.options.onEvaluation?.(result);
-    } catch {
-    }
+    notifyObserver(this.options.onEvaluation, result);
     return result;
   }
   multivariate(key, context, fallbackValue) {

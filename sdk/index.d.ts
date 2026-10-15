@@ -290,6 +290,7 @@ type Bootstrap = {
     configuration: ConfigurationV2;
     validatedAt: number;
 };
+type Observer<T extends object> = (value: Readonly<T>) => void | Promise<void>;
 type ClientOptions = {
     url: string;
     token: string;
@@ -302,8 +303,8 @@ type ClientOptions = {
     bootstrap?: Bootstrap;
     fetch?: typeof globalThis.fetch;
     now?: () => number;
-    onStatus?: (status: ClientStatus) => void;
-    onEvaluation?: (details: EvaluationDetails<boolean | string>) => void;
+    onStatus?: Observer<ClientStatus>;
+    onEvaluation?: Observer<EvaluationDetails<boolean | string>>;
 };
 /** One client per environment. All flag checks are synchronous and use a local snapshot. */
 declare class RolloutClient {

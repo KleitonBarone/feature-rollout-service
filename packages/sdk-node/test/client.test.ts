@@ -33,6 +33,124 @@ function response(input: ConfigurationV2 = configuration) {
   });
 }
 describe("SDK freshness and invalid updates", () => {
+  it("isolates evaluation results from observers for both flag types", async () => {
+    const client = new RolloutClient({
+      url: "http://localhost",
+      token: "synthetic-token",
+      environment: "test",
+      fetch: () =>
+        Promise.resolve(
+          response({
+            ...configuration,
+            flags: [
+              ...configuration.flags,
+              {
+                key: "theme",
+                type: "multivariate",
+                variants: [{ key: "control", value: "standard" }],
+                defaultVariant: "control",
+                rules: [],
+              },
+            ],
+          }),
+        ),
+      onEvaluation(details) {
+        Reflect.set(details, "value", "observer changed this");
+        throw new Error("Observer failed");
+      },
+    });
+    try {
+      await client.refresh();
+      expect(
+        client.boolean("feature", { targetingKey: "subject-a" }, false),
+      ).toBe(true);
+      expect(client.multivariate("theme", {}, "fallback")).toBe("standard");
+    } finally {
+      await client.close();
+    }
+  });
+  it("resolves readiness independently of status observer mutation", async () => {
+    vi.useFakeTimers();
+    const client = new RolloutClient({
+      url: "http://localhost",
+      token: "synthetic-token",
+      environment: "test",
+      initializationTimeoutMs: 100,
+      fetch: () => Promise.resolve(response()),
+      onStatus(status) {
+        Reflect.set(status, "state", "stale");
+      },
+    });
+    try {
+      const started = client.start().then(
+        () => "ready",
+        () => "timed out",
+      );
+      await vi.advanceTimersByTimeAsync(101);
+      expect(await started).toBe("ready");
+      expect(client.status().state).toBe("ready");
+    } finally {
+      await client.close();
+      vi.useRealTimers();
+    }
+  });
+  it("contains rejected async observers without awaiting them", async () => {
+    let statusCalls = 0;
+    let evaluationCalls = 0;
+    const onStatus = () => {
+      statusCalls++;
+      return Promise.reject(new Error("Async status observer"));
+    };
+    const onEvaluation = () => {
+      evaluationCalls++;
+      return Promise.reject(new Error("Async evaluation observer"));
+    };
+    const client = new RolloutClient({
+      url: "http://localhost",
+      token: "synthetic-token",
+      environment: "test",
+      fetch: () => Promise.resolve(response()),
+      onStatus,
+      onEvaluation,
+    });
+    try {
+      await client.start();
+      expect(
+        client.boolean("feature", { targetingKey: "subject-a" }, false),
+      ).toBe(true);
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(statusCalls).toBeGreaterThan(0);
+      expect(evaluationCalls).toBe(1);
+    } finally {
+      await client.close();
+    }
+  });
+  it("defaults without invoking context accessors", async () => {
+    const getter = vi.fn(() => {
+      throw new Error("Do not execute context getters");
+    });
+    const client = new RolloutClient({
+      url: "http://localhost",
+      token: "synthetic-token",
+      environment: "test",
+      fetch: () => Promise.resolve(response()),
+    });
+    try {
+      await client.refresh();
+      const context = {
+        get targetingKey(): string {
+          return getter();
+        },
+      };
+      expect(client.booleanDetails("feature", context, true)).toMatchObject({
+        value: false,
+        reasonCode: "DEFAULT_INVALID_CONTEXT",
+      });
+      expect(getter).not.toHaveBeenCalled();
+    } finally {
+      await client.close();
+    }
+  });
   it("polls automatically and releases its scheduler at shutdown", async () => {
     vi.useFakeTimers();
     let body = configuration;

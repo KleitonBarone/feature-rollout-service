@@ -16,6 +16,7 @@ export type ClientStatus = {
   lastError?: string;
 };
 export type Bootstrap = { configuration: ConfigurationV2; validatedAt: number };
+type Observer<T extends object> = (value: Readonly<T>) => void | Promise<void>;
 export type ClientOptions = {
   url: string;
   token: string;
@@ -28,9 +29,38 @@ export type ClientOptions = {
   bootstrap?: Bootstrap;
   fetch?: typeof globalThis.fetch;
   now?: () => number;
-  onStatus?: (status: ClientStatus) => void;
-  onEvaluation?: (details: EvaluationDetails<boolean | string>) => void;
+  onStatus?: Observer<ClientStatus>;
+  onEvaluation?: Observer<EvaluationDetails<boolean | string>>;
 };
+
+function notifyObserver<T extends object>(
+  observer: Observer<T> | undefined,
+  value: T,
+): void {
+  if (!observer) return;
+  try {
+    const pending = observer(Object.freeze({ ...value }));
+    if (pending) void Promise.resolve(pending).catch(() => undefined);
+  } catch {
+    // Observers cannot change results or interrupt client lifecycle work.
+  }
+}
+
+/** Preserve descriptors so validation can reject accessors without executing them. */
+function versionContext(context: Context): unknown {
+  try {
+    const prototype: unknown = Object.getPrototypeOf(context);
+    if (prototype !== Object.prototype && prototype !== null) return undefined;
+    const descriptors = Object.getOwnPropertyDescriptors(context);
+    if (Object.hasOwn(descriptors, "schemaVersion")) return undefined;
+    return Object.create(prototype, {
+      ...descriptors,
+      schemaVersion: { value: "evaluation-context-v1", enumerable: true },
+    }) as unknown;
+  } catch {
+    return undefined;
+  }
+}
 
 /** One client per environment. All flag checks are synchronous and use a local snapshot. */
 export class RolloutClient {
@@ -139,17 +169,13 @@ export class RolloutClient {
   }
   private notify() {
     const status = this.status();
-    try {
-      this.options.onStatus?.(status);
-    } catch {
-      /* Consumer callbacks cannot break refresh or evaluation. */
-    }
     if (status.state === "ready")
       for (const waiter of this.waiters) {
         clearTimeout(waiter.timer);
         waiter.resolve();
         this.waiters.delete(waiter);
       }
+    notifyObserver(this.options.onStatus, status);
   }
   async start(): Promise<void> {
     if (this.closed) throw new Error("Client is closed");
@@ -298,7 +324,7 @@ export class RolloutClient {
   ): EvaluationDetails<boolean> {
     const result = this.snapshot?.boolean(
       key,
-      { ...context, schemaVersion: "evaluation-context-v1" },
+      versionContext(context),
       fallbackValue,
       this.status().state !== "ready",
     ) ?? {
@@ -306,11 +332,7 @@ export class RolloutClient {
       value: fallbackValue,
       reasonCode: "FALLBACK_INVALID_CONFIGURATION" as const,
     };
-    try {
-      this.options.onEvaluation?.(result);
-    } catch {
-      /* Consumer callbacks cannot change decisions. */
-    }
+    notifyObserver(this.options.onEvaluation, result);
     return result;
   }
   boolean(key: string, context: Context, fallbackValue: boolean): boolean {
@@ -323,7 +345,7 @@ export class RolloutClient {
   ): EvaluationDetails<string> {
     const result = this.snapshot?.multivariate(
       key,
-      { ...context, schemaVersion: "evaluation-context-v1" },
+      versionContext(context),
       fallbackValue,
       this.status().state !== "ready",
     ) ?? {
@@ -331,11 +353,7 @@ export class RolloutClient {
       value: fallbackValue,
       reasonCode: "FALLBACK_INVALID_CONFIGURATION" as const,
     };
-    try {
-      this.options.onEvaluation?.(result);
-    } catch {
-      /* Consumer callbacks cannot change decisions. */
-    }
+    notifyObserver(this.options.onEvaluation, result);
     return result;
   }
   multivariate(key: string, context: Context, fallbackValue: string): string {

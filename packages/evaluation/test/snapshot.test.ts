@@ -18,6 +18,18 @@ delete base.expiresAt;
 const configuration = { ...base, schemaVersion: "configuration-v2" };
 
 describe("prepared snapshots", () => {
+  it("defaults for deeply nested invalid input without overflowing the stack", () => {
+    let attributes: unknown = {};
+    for (let i = 0; i < 10000; i++) attributes = { nested: attributes };
+    const snapshot = prepareSnapshot(configuration);
+    expect(
+      snapshot.boolean(
+        "ordered-rule",
+        { schemaVersion: "evaluation-context-v1", attributes },
+        true,
+      ),
+    ).toMatchObject({ value: false, reasonCode: "DEFAULT_INVALID_CONTEXT" });
+  });
   it("preserves ordered decisions, isolates mutation, and explicitly defaults on stale state", () => {
     const source: Record<string, unknown> = structuredClone(configuration);
     const snapshot = prepareSnapshot(source);

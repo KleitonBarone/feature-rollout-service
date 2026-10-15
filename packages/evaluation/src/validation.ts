@@ -173,12 +173,18 @@ export function parseConfigurationV2(input: unknown): ConfigurationV2 {
 }
 
 /** Rejects non-JSON runtime values and strings that RFC 8785 cannot serialize. */
-export function assertJSON(input: unknown, parents = new Set<object>()): void {
+export function assertJSON(
+  input: unknown,
+  parents = new Set<object>(),
+  depth = 0,
+): void {
   const invalid = () => {
     throw new ContractValidationError("Unsupported JSON value", [
       "Use plain JSON, finite safe numbers, and well-formed Unicode.",
     ]);
   };
+  // Valid contract data is shallow. Bound traversal of malformed nested input.
+  if (depth > 32) return invalid();
   if (input === null || typeof input === "boolean") return;
   if (typeof input === "string") {
     if (!input.isWellFormed()) invalid();
@@ -212,7 +218,7 @@ export function assertJSON(input: unknown, parents = new Set<object>()): void {
       !descriptor.enumerable
     )
       invalid();
-    assertJSON(descriptor.value as unknown, parents);
+    assertJSON(descriptor.value as unknown, parents, depth + 1);
   }
   if (Array.isArray(input) && Object.keys(input).length !== input.length)
     invalid();
